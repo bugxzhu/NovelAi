@@ -36,3 +36,13 @@ def test_pragmas_are_applied(tmp_path, monkeypatch):
     with new_session() as s:
         assert s.execute(text("PRAGMA journal_mode")).scalar() == "wal"
         assert s.execute(text("PRAGMA foreign_keys")).scalar() == 1
+
+
+def test_init_db_creates_m1_tables(tmp_path, monkeypatch):
+    _rebind_engine(tmp_path, monkeypatch)
+    init_db()
+    from app.memory.base import Base
+
+    expected = {"projects", "world_overview", "lore_entries", "characters", "chapters"}
+    actual = set(Base.metadata.tables.keys())
+    assert expected.issubset(actual), f"missing tables: {expected - actual}"
