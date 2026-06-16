@@ -12,8 +12,6 @@ def test_llm_request_dataclass():
 
 
 def test_claude_provider_calls_sdk(monkeypatch):
-    fake_msg = MagicMock()
-    fake_msg.content = [MagicMock(text="hello world")]
     fake_resp = MagicMock()
     fake_resp.content = [MagicMock(text="hello world")]
     fake_resp.usage.input_tokens = 10
@@ -26,11 +24,37 @@ def test_claude_provider_calls_sdk(monkeypatch):
     monkeypatch.setattr("app.llm.providers.claude.Anthropic", lambda **kw: fake_client)
 
     provider = ClaudeProvider(api_key="fake")
-    resp = provider.complete(LLMRequest(model_task="writer_short", user="hi"))
+    resp = provider.complete(LLMRequest(model_task="writer_short", user="hi", max_tokens=100))
     assert isinstance(resp, LLMResponse)
     assert resp.text == "hello world"
     assert resp.input_tokens == 10
     assert resp.output_tokens == 5
+
+    fake_client.messages.create.assert_called_once()
+    call_kwargs = fake_client.messages.create.call_args.kwargs
+    assert call_kwargs["model"] == "claude-haiku-4-5"
+    assert call_kwargs["max_tokens"] == 100
+    assert call_kwargs["messages"] == [{"role": "user", "content": "hi"}]
+    assert "system" not in call_kwargs  # empty system → not forwarded
+
+
+def test_claude_provider_forwards_system_prompt(monkeypatch):
+    fake_resp = MagicMock()
+    fake_resp.content = [MagicMock(text="ok")]
+    fake_resp.usage.input_tokens = 1
+    fake_resp.usage.output_tokens = 1
+    fake_resp.stop_reason = "end_turn"
+
+    fake_client = MagicMock()
+    fake_client.messages.create.return_value = fake_resp
+
+    monkeypatch.setattr("app.llm.providers.claude.Anthropic", lambda **kw: fake_client)
+
+    provider = ClaudeProvider(api_key="fake")
+    provider.complete(LLMRequest(model_task="writer_short", user="hi", system="You are a poet"))
+
+    call_kwargs = fake_client.messages.create.call_args.kwargs
+    assert call_kwargs["system"] == "You are a poet"
 
 
 def test_model_router_resolves_task_to_model():
