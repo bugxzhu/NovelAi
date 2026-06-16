@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health, projects, world
+from app.api import health, projects, world, lore
 from app.memory.session import init_db
 
 
@@ -17,6 +17,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api")
     app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
     app.include_router(world.router, prefix="/api/projects", tags=["world"])
+    app.include_router(lore.router, prefix="/api/lore", tags=["lore"])
     return app
 
 
