@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.memory.base import Base
+
+
+def _now_utc() -> datetime:
+    return datetime.now(UTC)
 
 
 class Project(Base):
@@ -15,8 +19,8 @@ class Project(Base):
     premise: Mapped[str] = mapped_column(Text, default="")
     main_theme: Mapped[str] = mapped_column(Text, default="")
     tone: Mapped[str] = mapped_column(String(200), default="")
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
     world_overview: Mapped["WorldOverview | None"] = relationship(
         back_populates="project", uselist=False, cascade="all, delete-orphan"
@@ -45,8 +49,8 @@ class WorldOverview(Base):
     culture_summary: Mapped[str] = mapped_column(Text, default="")
     power_system: Mapped[str] = mapped_column(Text, default="")
     rules_and_taboos: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
     project: Mapped["Project"] = relationship(back_populates="world_overview")
 
@@ -65,8 +69,8 @@ class LoreEntry(Base):
         ForeignKey("lore_entries.id", ondelete="SET NULL"), nullable=True
     )
     tags: Mapped[list] = mapped_column(JSON, default=list)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
     project: Mapped["Project"] = relationship(back_populates="lore_entries")
     parent: Mapped["LoreEntry | None"] = relationship(
@@ -89,8 +93,8 @@ class Character(Base):
     current_state: Mapped[str] = mapped_column(Text, default="")
     affiliations: Mapped[list] = mapped_column(JSON, default=list)
     known_locations: Mapped[list] = mapped_column(JSON, default=list)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
     project: Mapped["Project"] = relationship(back_populates="characters")
 
@@ -108,7 +112,7 @@ class Chapter(Base):
     plot_line_ids: Mapped[list] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")
     content_hash: Mapped[str] = mapped_column(String(64), default="")
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
     project: Mapped["Project"] = relationship(back_populates="chapters")

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.llm.base import LLMRequest
-from app.llm.router import ModelRouter
+from app.llm.router import default_router
 
 router = APIRouter()
 
@@ -20,9 +20,8 @@ class PingResponse(BaseModel):
 
 @router.post("/ping", response_model=PingResponse)
 def ping(payload: PingRequest):
-    router_ = ModelRouter()
     try:
-        resp = router_.complete(
+        resp = default_router.complete(
             LLMRequest(model_task=payload.model_task, user=payload.prompt, max_tokens=64)
         )
     except Exception as e:

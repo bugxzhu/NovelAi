@@ -1,7 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
-from app.memory.session import SessionLocal, init_db
+from app.memory.session import init_db
 
 
 def _rebind_engine(tmp_path, monkeypatch):

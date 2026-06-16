@@ -1,3 +1,4 @@
+from app.config import settings
 from app.llm.base import LLMProvider, LLMResponse
 from app.llm.providers.claude import ClaudeProvider
 
@@ -11,15 +12,23 @@ DEFAULT_ROUTES = {
 
 
 class ModelRouter:
-    def __init__(self, default_provider: str = "claude", routes: dict | None = None):
+    def __init__(
+        self,
+        default_provider: str = "claude",
+        routes: dict | None = None,
+        api_keys: dict[str, str] | None = None,
+    ):
         self.default_provider = default_provider
         self.routes = routes or DEFAULT_ROUTES
+        self._api_keys = api_keys or {}
         self._providers: dict[str, LLMProvider] = {}
 
     def _get_provider(self, name: str) -> LLMProvider:
         if name not in self._providers:
             if name == "claude":
-                self._providers[name] = ClaudeProvider()
+                self._providers[name] = ClaudeProvider(
+                    api_key=self._api_keys.get("claude", settings.anthropic_api_key)
+                )
             else:
                 raise ValueError(f"unknown provider: {name}")
         return self._providers[name]
@@ -34,3 +43,7 @@ class ModelRouter:
         provider_name, model = self.resolve_model(request.model_task)
         provider = self._get_provider(provider_name)
         return provider.complete(request, model)
+
+
+# 进程级单例：复用底层 httpx 连接池，避免每请求新建 Anthropic 客户端
+default_router = ModelRouter()

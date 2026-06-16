@@ -1,5 +1,3 @@
-import os
-
 from anthropic import Anthropic
 
 from app.llm.base import LLMRequest, LLMResponse
@@ -8,8 +6,8 @@ from app.llm.base import LLMRequest, LLMResponse
 class ClaudeProvider:
     name = "claude"
 
-    def __init__(self, api_key: str | None = None):
-        self._client = Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY", ""))
+    def __init__(self, api_key: str = ""):
+        self._client = Anthropic(api_key=api_key)
 
     def complete(self, request: LLMRequest, model: str | None = None) -> LLMResponse:
         kwargs = {
