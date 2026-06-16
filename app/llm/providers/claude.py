@@ -1,6 +1,9 @@
+from collections.abc import Iterator
+
 from anthropic import Anthropic
 
 from app.llm.base import LLMRequest, LLMResponse
+from app.llm.streaming import StreamEvent
 
 
 class ClaudeProvider:
@@ -26,3 +29,30 @@ class ClaudeProvider:
             stop_reason=getattr(resp, "stop_reason", ""),
             raw=resp,
         )
+
+    def stream(self, request: LLMRequest, model: str | None = None) -> Iterator[StreamEvent]:
+        kwargs = {
+            "model": model or "claude-haiku-4-5",
+            "max_tokens": request.max_tokens,
+            "messages": [{"role": "user", "content": request.user}],
+        }
+        if request.system:
+            kwargs["system"] = request.system
+        try:
+            with self._client.messages.stream(**kwargs) as stream:
+                for chunk in stream.text_stream:
+                    yield StreamEvent(type="token", text=chunk)
+                final = stream.get_final_message()
+                yield StreamEvent(
+                    type="done",
+                    input_tokens=getattr(final.usage, "input_tokens", 0),
+                    output_tokens=getattr(final.usage, "output_tokens", 0),
+                    stop_reason=getattr(final, "stop_reason", ""),
+                    raw=final,
+                )
+        except Exception as e:
+            yield StreamEvent(
+                type="error",
+                error_message=str(e),
+                error_code=type(e).__name__,
+            )

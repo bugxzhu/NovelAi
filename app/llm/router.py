@@ -1,6 +1,9 @@
+from collections.abc import Iterator
+
 from app.config import settings
 from app.llm.base import LLMProvider, LLMResponse
 from app.llm.providers.claude import ClaudeProvider
+from app.llm.streaming import StreamEvent
 
 DEFAULT_ROUTES = {
     "writer_long":  ("claude", "claude-sonnet-4-6"),
@@ -43,6 +46,11 @@ class ModelRouter:
         provider_name, model = self.resolve_model(request.model_task)
         provider = self._get_provider(provider_name)
         return provider.complete(request, model)
+
+    def stream(self, request) -> Iterator[StreamEvent]:
+        provider_name, model = self.resolve_model(request.model_task)
+        provider = self._get_provider(provider_name)
+        yield from provider.stream(request, model)
 
 
 # 进程级单例：复用底层 httpx 连接池，避免每请求新建 Anthropic 客户端

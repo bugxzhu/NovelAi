@@ -1,5 +1,8 @@
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Protocol
+
+from app.llm.streaming import StreamEvent
 
 
 @dataclass
@@ -25,3 +28,5 @@ class LLMProvider(Protocol):
     name: str
 
     def complete(self, request: LLMRequest, model: str) -> LLMResponse: ...
+
+    def stream(self, request: LLMRequest, model: str) -> Iterator[StreamEvent]: ...
