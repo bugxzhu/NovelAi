@@ -148,13 +148,12 @@ def test_generate_sse_emits_error_event_on_llm_failure(client, monkeypatch):
     assert "API dead" in err["message"]
     assert err["code"] == "RuntimeError"
     log_id = events[0][1]["generation_log_id"]
-    # DB log marked failed — verify via DB (Task 7 detail endpoint comes later)
-    from app.memory.schema import GenerationLog
-    from sqlalchemy import create_engine, select
-    # Use the same DB the test client is bound to via app state
-    # Simpler: query via the API by listing logs (Task 7 not yet implemented)
-    # For now, just check the event sequence and error payload
     assert log_id > 0
+    # Verify DB log was marked failed via the detail endpoint (Task 7)
+    detail = client.get(f"/api/generation-logs/{log_id}").json()
+    assert detail["status"] == "failed"
+    assert detail["stop_reason"] == "RuntimeError"
+    assert detail["finished_at"] is not None
 
 
 def test_generate_creates_log_before_streaming(client, fake_router):
