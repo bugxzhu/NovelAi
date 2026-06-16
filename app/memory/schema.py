@@ -116,3 +116,40 @@ class Chapter(Base):
     updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
     project: Mapped["Project"] = relationship(back_populates="chapters")
+
+
+class GenerationLog(Base):
+    __tablename__ = "generation_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"))
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+
+    # 输入
+    beat_text: Mapped[str] = mapped_column(Text, nullable=False)
+    instruction: Mapped[str] = mapped_column(Text, default="")
+    involved_character_ids: Mapped[list] = mapped_column(JSON, default=list)
+    location_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # 组装的 prompt
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    user_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    context_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    # 输出
+    generated_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    model_task: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # 用量
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    stop_reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # 状态
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="streaming")
+    started_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
