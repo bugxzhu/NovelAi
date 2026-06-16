@@ -1,0 +1,116 @@
+from types import SimpleNamespace
+
+import pytest
+from jinja2 import UndefinedError
+
+from app.llm.prompts import render
+
+
+def _fake_project():
+    return SimpleNamespace(
+        title="TestNovel", genre="fantasy", main_theme="courage",
+        tone="epic", premise="A test premise.",
+    )
+
+
+def _fake_world_overview():
+    return SimpleNamespace(
+        setting_era="Medieval", geography_summary="Many islands",
+        history_summary="Old war", culture_summary="Multi-ethnic",
+        power_system="Magic", rules_and_taboos="No necromancy",
+    )
+
+
+def _fake_character(id_=1, name="Li", role="protagonist"):
+    return SimpleNamespace(
+        id=id_, name=name, role=role,
+        personality={"mbti": "INTJ", "traits": ["calm"]},
+        speech_style="short sentences",
+        motivation="revenge",
+        background="orphan",
+    )
+
+
+def _fake_state(state="angry"):
+    return SimpleNamespace(current_state=state, change_summary="")
+
+
+def _fake_summary(title="Prev", order_index=1, summary="stuff"):
+    return SimpleNamespace(chapter_id=10, order_index=order_index,
+                            title=title, summary=summary)
+
+
+def _fake_lore(name="Loc1", type_="location", description="A place."):
+    return SimpleNamespace(name=name, type=type_, description=description,
+                            title="", parent_id=None)
+
+
+def test_render_system_returns_nonempty():
+    out = render("writer/system.j2")
+    assert isinstance(out, str)
+    assert "小说写作助手" in out or "novel" in out.lower()
+
+
+def test_render_user_full():
+    out = render(
+        "writer/user.j2",
+        project=_fake_project(),
+        world_overview=_fake_world_overview(),
+        characters=[_fake_character()],
+        character_states={1: _fake_state()},
+        relationships=[],
+        faction_lore=[_fake_lore(name="守夜人", type_="faction")],
+        location_lore=[_fake_lore()],
+        recent_chapter_summaries=[_fake_summary()],
+        beat_text="主角遇旧友",
+        instruction="氛围压抑",
+    )
+    assert "TestNovel" in out
+    assert "Medieval" in out
+    assert "Li" in out
+    assert "守夜人" in out
+    assert "主角遇旧友" in out
+    assert "氛围压抑" in out
+
+
+def test_render_user_minimal_no_world_no_lore_no_recent():
+    out = render(
+        "writer/user.j2",
+        project=_fake_project(),
+        world_overview=None,
+        characters=[_fake_character()],
+        character_states={1: _fake_state()},
+        relationships=[],
+        faction_lore=[],
+        location_lore=[],
+        recent_chapter_summaries=[],
+        beat_text="x",
+        instruction="",
+    )
+    assert "TestNovel" in out
+    assert "Li" in out
+    assert "x" in out
+    assert "Medieval" not in out
+
+
+def test_render_user_missing_variable_raises():
+    with pytest.raises(UndefinedError):
+        render("writer/user.j2", project=_fake_project())
+
+
+def test_render_user_empty_characters_list():
+    out = render(
+        "writer/user.j2",
+        project=_fake_project(),
+        world_overview=None,
+        characters=[],
+        character_states={},
+        relationships=[],
+        faction_lore=[],
+        location_lore=[],
+        recent_chapter_summaries=[],
+        beat_text="x",
+        instruction="",
+    )
+    assert "TestNovel" in out
+    assert "x" in out

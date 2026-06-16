@@ -1,0 +1,68 @@
+# 项目背景
+标题：{{ project.title }}
+类型：{{ project.genre }}
+主题：{{ project.main_theme }}
+基调：{{ project.tone }}
+核心设定：{{ project.premise }}
+
+{% if world_overview %}
+# 世界观
+- 时代：{{ world_overview.setting_era }}
+- 力量体系：{{ world_overview.power_system }}
+- 规则与禁忌：{{ world_overview.rules_and_taboos }}
+- 地理：{{ world_overview.geography_summary }}
+- 文化：{{ world_overview.culture_summary }}
+{% endif %}
+
+# 本场景涉及人物
+{% for c in characters %}
+## {{ c.name }}（{{ c.role }}）
+- 性格：{{ c.personality | tojson }}
+- 说话风格：{{ c.speech_style }}
+- 当前状态：{{ character_states[c.id].current_state }}
+- 动机：{{ c.motivation }}
+- 背景：{{ c.background }}
+
+{% endfor %}
+
+{% if relationships %}
+# 当前关系（仅本场景涉及人物间）
+{% for r in relationships %}
+- {{ r.from_name }} → {{ r.to_name }}：{{ r.type }}（强度 {{ r.strength }}）— {{ r.description }}
+{% endfor %}
+{% endif %}
+
+{% if faction_lore or location_lore %}
+# 场景设定
+{% if location_lore %}
+## 地点（含上级区域）
+{% for loc in location_lore %}
+- {{ loc.name }}{% if loc.title %}（{{ loc.title }}）{% endif %}：{{ loc.description }}
+{% endfor %}
+{% endif %}
+{% if faction_lore %}
+## 涉及势力
+{% for f in faction_lore %}
+- {{ f.name }}：{{ f.description }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+{% if recent_chapter_summaries %}
+# 前情提要
+{% for s in recent_chapter_summaries %}
+- 第{{ s.order_index }}章 {{ s.title }}：{{ s.summary }}
+{% endfor %}
+{% endif %}
+
+# 本次写作任务
+
+请扩写以下情节片段：
+
+> {{ beat_text }}
+
+{% if instruction %}
+作者附加要求：{{ instruction }}
+{% endif %}
+
+请直接输出正文（Markdown 格式），不要写解析或说明。
