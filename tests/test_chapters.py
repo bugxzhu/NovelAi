@@ -46,3 +46,12 @@ def test_delete_chapter(client):
         "/api/chapters", json={"project_id": pid, "order_index": 1, "title": "T"}
     ).json()["id"]
     assert client.delete(f"/api/chapters/{cid}").status_code == 204
+
+
+def test_create_chapter_with_invalid_project_returns_404(client):
+    r = client.post(
+        "/api/chapters",
+        json={"project_id": 99999, "order_index": 1, "title": "T"},
+    )
+    assert r.status_code == 404
+    assert r.json()["detail"] == "project not found"

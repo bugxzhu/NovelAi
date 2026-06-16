@@ -65,3 +65,12 @@ def test_delete_lore_entry(client):
     ).json()["id"]
     r = client.delete(f"/api/lore/{lid}")
     assert r.status_code == 204
+
+
+def test_create_lore_with_invalid_project_returns_404(client):
+    r = client.post(
+        "/api/lore",
+        json={"project_id": 99999, "type": "location", "name": "X"},
+    )
+    assert r.status_code == 404
+    assert r.json()["detail"] == "project not found"

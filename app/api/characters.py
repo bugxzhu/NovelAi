@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api._helpers import get_project_or_404
 from app.api.deps import get_db
 from app.memory.schema import Character
 from app.models.character import CharacterCreate, CharacterRead, CharacterUpdate
@@ -11,6 +12,7 @@ router = APIRouter()
 
 @router.post("", response_model=CharacterRead, status_code=status.HTTP_201_CREATED)
 def create_character(payload: CharacterCreate, db: Session = Depends(get_db)):
+    get_project_or_404(db, payload.project_id)
     obj = Character(**payload.model_dump())
     db.add(obj)
     db.commit()

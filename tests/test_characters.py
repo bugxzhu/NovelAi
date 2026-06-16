@@ -53,3 +53,9 @@ def test_delete_character(client):
         "/api/characters", json={"project_id": pid, "name": "X"}
     ).json()["id"]
     assert client.delete(f"/api/characters/{cid}").status_code == 204
+
+
+def test_create_character_with_invalid_project_returns_404(client):
+    r = client.post("/api/characters", json={"project_id": 99999, "name": "X"})
+    assert r.status_code == 404
+    assert r.json()["detail"] == "project not found"
