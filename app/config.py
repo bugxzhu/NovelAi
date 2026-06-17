@@ -17,6 +17,24 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("ANTHROPIC_API_KEY", "NOVELAI_ANTHROPIC_API_KEY"),
     )
 
+    # LLM provider selection: "claude" or "openai"
+    default_llm_provider: str = "claude"
+
+    # OpenAI-compatible settings (works with OpenAI / DashScope / Ollama / vLLM / etc.)
+    openai_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("OPENAI_API_KEY", "NOVELAI_OPENAI_API_KEY"),
+    )
+    openai_base_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("OPENAI_BASE_URL", "NOVELAI_OPENAI_BASE_URL"),
+    )
+    # Single model used for all tasks (keep config simple; can split later)
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("OPENAI_MODEL", "NOVELAI_OPENAI_MODEL"),
+    )
+
     @property
     def db_url(self) -> str:
         return f"sqlite:///{self.db_path}"
