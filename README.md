@@ -20,7 +20,7 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-## M1 API 一览
+## API 一览
 
 | 资源 | 端点 |
 |---|---|
@@ -29,4 +29,6 @@ pytest
 | Lore | `POST/GET/PATCH/DELETE /api/lore` |
 | 人物 | `POST/GET/PATCH/DELETE /api/characters` |
 | 章节 | `POST/GET/PATCH/DELETE /api/chapters` |
+| 章节生成（SSE） | `POST /api/chapters/{id}/generate` |
+| 生成日志 | `GET /api/generation-logs?chapter_id=X` / `GET /api/generation-logs/{id}` |
 | LLM | `POST /api/llm/ping` |
