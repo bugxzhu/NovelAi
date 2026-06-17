@@ -32,7 +32,7 @@ def test_claude_provider_calls_sdk(monkeypatch):
 
     fake_client.messages.create.assert_called_once()
     call_kwargs = fake_client.messages.create.call_args.kwargs
-    assert call_kwargs["model"] == "claude-haiku-4-5"
+    assert call_kwargs["model"] == "claude-sonnet-4-6"
     assert call_kwargs["max_tokens"] == 100
     assert call_kwargs["messages"] == [{"role": "user", "content": "hi"}]
     assert "system" not in call_kwargs  # empty system → not forwarded
@@ -66,3 +66,30 @@ def test_model_router_unknown_task_falls_back():
     router = ModelRouter(default_provider="claude")
     provider, model = router.resolve_model("nonexistent_task")
     assert provider == "claude"
+
+
+def test_claude_provider_accepts_base_url(monkeypatch):
+    """ClaudeProvider should pass base_url to Anthropic client when provided."""
+    captured_kwargs = {}
+    def fake_anthropic(**kwargs):
+        captured_kwargs.update(kwargs)
+        return MagicMock()
+    monkeypatch.setattr("app.llm.providers.claude.Anthropic", fake_anthropic)
+
+    ClaudeProvider(api_key="sk-test", base_url="https://my-proxy.example.com")
+    assert captured_kwargs["api_key"] == "sk-test"
+    assert captured_kwargs["base_url"] == "https://my-proxy.example.com"
+
+
+def test_claude_provider_omits_base_url_when_empty(monkeypatch):
+    """Empty base_url should not be passed to Anthropic client (use SDK default)."""
+    captured_kwargs = {}
+    def fake_anthropic(**kwargs):
+        captured_kwargs.update(kwargs)
+        return MagicMock()
+    monkeypatch.setattr("app.llm.providers.claude.Anthropic", fake_anthropic)
+
+    ClaudeProvider(api_key="sk-test", base_url="")
+    assert captured_kwargs["api_key"] == "sk-test"
+    assert "base_url" not in captured_kwargs
+

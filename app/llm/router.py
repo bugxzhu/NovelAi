@@ -16,13 +16,15 @@ CLAUDE_ROUTES = {
 
 
 def _build_routes(provider: str) -> dict[str, tuple[str, str]]:
-    """Build route table based on selected provider."""
+    """Build route table based on selected provider. Single model per provider
+    for all tasks (M2a simplification; M3 may split)."""
     if provider == "openai":
-        # OpenAI-compatible: single model for all tasks (can be split later)
         model = settings.openai_model or "gpt-4o-mini"
-        return {task: ("openai", model) for task in CLAUDE_ROUTES}
-    # Default: Claude routes
-    return dict(CLAUDE_ROUTES)
+    else:  # claude
+        model = settings.anthropic_model or "claude-sonnet-4-6"
+    # Tasks list is the canonical set of LLM tasks across all agents
+    tasks = ("writer_long", "writer_short", "reviewer", "discuss", "extractor")
+    return {task: (provider, model) for task in tasks}
 
 
 # Backward-compat alias
@@ -45,7 +47,8 @@ class ModelRouter:
         if name not in self._providers:
             if name == "claude":
                 self._providers[name] = ClaudeProvider(
-                    api_key=self._api_keys.get("claude", settings.anthropic_api_key)
+                    api_key=self._api_keys.get("claude", settings.anthropic_api_key),
+                    base_url=settings.anthropic_base_url,
                 )
             elif name == "openai":
                 self._providers[name] = OpenAIProvider(
@@ -65,7 +68,7 @@ class ModelRouter:
     def _fallback_model(self) -> str:
         if self.default_provider == "openai":
             return settings.openai_model or "gpt-4o-mini"
-        return "claude-haiku-4-5"
+        return settings.anthropic_model or "claude-sonnet-4-6"
 
     def complete(self, request) -> LLMResponse:
         provider_name, model = self.resolve_model(request.model_task)

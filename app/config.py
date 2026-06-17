@@ -16,6 +16,14 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("ANTHROPIC_API_KEY", "NOVELAI_ANTHROPIC_API_KEY"),
     )
+    anthropic_base_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("ANTHROPIC_BASE_URL", "NOVELAI_ANTHROPIC_BASE_URL"),
+    )
+    anthropic_model: str = Field(
+        default="claude-sonnet-4-6",
+        validation_alias=AliasChoices("ANTHROPIC_MODEL", "NOVELAI_ANTHROPIC_MODEL"),
+    )
 
     # LLM provider selection: "claude" or "openai"
     default_llm_provider: str = "claude"

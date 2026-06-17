@@ -9,12 +9,15 @@ from app.llm.streaming import StreamEvent
 class ClaudeProvider:
     name = "claude"
 
-    def __init__(self, api_key: str = ""):
-        self._client = Anthropic(api_key=api_key)
+    def __init__(self, api_key: str = "", base_url: str = ""):
+        kwargs = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        self._client = Anthropic(**kwargs)
 
     def complete(self, request: LLMRequest, model: str | None = None) -> LLMResponse:
         kwargs = {
-            "model": model or "claude-haiku-4-5",
+            "model": model or "claude-sonnet-4-6",
             "max_tokens": request.max_tokens,
             "messages": [{"role": "user", "content": request.user}],
         }
@@ -32,7 +35,7 @@ class ClaudeProvider:
 
     def stream(self, request: LLMRequest, model: str | None = None) -> Iterator[StreamEvent]:
         kwargs = {
-            "model": model or "claude-haiku-4-5",
+            "model": model or "claude-sonnet-4-6",
             "max_tokens": request.max_tokens,
             "messages": [{"role": "user", "content": request.user}],
         }
