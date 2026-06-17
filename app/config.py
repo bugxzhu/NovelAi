@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     )
 
     # LLM provider selection: "claude" or "openai"
-    default_llm_provider: str = "claude"
+    # Reads NOVELAI_LLM_PROVIDER (field name without "default_" prefix is intentional
+    # for a concise env var name).
+    llm_provider: str = "claude"
 
     # OpenAI-compatible settings (works with OpenAI / DashScope / Ollama / vLLM / etc.)
     openai_api_key: str = Field(

@@ -90,6 +90,8 @@ def test_claude_stream_wraps_errors(monkeypatch):
 
 def test_model_router_stream_forwards(monkeypatch):
     """ModelRouter.stream yields from the resolved provider's stream."""
+    monkeypatch.setattr("app.config.settings.llm_provider", "claude")
+    monkeypatch.setattr("app.config.settings.anthropic_model", "claude-sonnet-4-6")
     fake_provider = MagicMock()
     fake_provider.stream.return_value = iter([
         StreamEvent(type="token", text="a"),

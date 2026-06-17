@@ -38,7 +38,7 @@ class ModelRouter:
         routes: dict | None = None,
         api_keys: dict[str, str] | None = None,
     ):
-        self.default_provider = default_provider or settings.default_llm_provider
+        self.default_provider = default_provider or settings.llm_provider
         self.routes = routes or _build_routes(self.default_provider)
         self._api_keys = api_keys or {}
         self._providers: dict[str, LLMProvider] = {}

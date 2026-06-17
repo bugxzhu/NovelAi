@@ -96,10 +96,10 @@ def test_openai_provider_stream_wraps_errors(monkeypatch):
 
 
 def test_model_router_resolves_openai_when_configured(monkeypatch):
-    """When default_llm_provider='openai', router uses OpenAI routes."""
+    """When llm_provider='openai', router uses OpenAI routes."""
     from app.llm.router import ModelRouter
     # Patch settings to use openai
-    monkeypatch.setattr("app.config.settings.default_llm_provider", "openai")
+    monkeypatch.setattr("app.config.settings.llm_provider", "openai")
     monkeypatch.setattr("app.config.settings.openai_model", "qwen-plus")
     router = ModelRouter()
     provider_name, model = router.resolve_model("writer_long")
@@ -115,7 +115,7 @@ def test_model_router_resolves_openai_when_configured(monkeypatch):
 def test_model_router_uses_anthropic_model_for_all_tasks(monkeypatch):
     """When provider=claude, all tasks should use settings.anthropic_model."""
     from app.llm.router import ModelRouter
-    monkeypatch.setattr("app.config.settings.default_llm_provider", "claude")
+    monkeypatch.setattr("app.config.settings.llm_provider", "claude")
     monkeypatch.setattr("app.config.settings.anthropic_model", "claude-3-opus-20240229")
     router = ModelRouter()
     for task in ("writer_long", "writer_short", "reviewer", "discuss", "extractor"):
