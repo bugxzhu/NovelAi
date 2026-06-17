@@ -188,3 +188,54 @@ def test_stream_generation_persists_log_on_error(db_session):
     assert log.status == "failed"
     assert log.stop_reason == "RuntimeError"
     assert log.finished_at is not None
+
+
+def test_finalize_done_writes_back_chapter_defaults(db_session):
+    """When generation done, chapter.last_involved_character_ids and last_location_id
+    must be updated to the values used in this generation."""
+    from app.memory.schema import Chapter
+    p, chars, loc, faction, ch = _seed_full_project(db_session)
+    fake_router = FakeRouter([
+        StreamEvent(type="token", text="hello"),
+        StreamEvent(type="done", input_tokens=5, output_tokens=1,
+                    stop_reason="end_turn"),
+    ])
+    prep = prepare_generation(
+        db_session, chapter_id=ch.id, beat_text="x", instruction="",
+        involved_character_ids=[chars[0].id, chars[1].id],
+        location_id=loc.id,
+        model_task="writer_long", max_tokens=4096, router=fake_router,
+    )
+    list(stream_generation(db_session, prep, router=fake_router))
+
+    db_session.expire_all()
+    chapter = db_session.get(Chapter, ch.id)
+    assert chapter.last_involved_character_ids == [chars[0].id, chars[1].id]
+    assert chapter.last_location_id == loc.id
+
+
+def test_finalize_done_preserves_chapter_on_error(db_session):
+    """Error path must NOT overwrite chapter defaults -- keep previous values."""
+    from app.memory.schema import Chapter
+    p, chars, loc, faction, ch = _seed_full_project(db_session)
+    # Pre-set defaults
+    ch_ref = db_session.get(Chapter, ch.id)
+    ch_ref.last_involved_character_ids = [chars[0].id]
+    ch_ref.last_location_id = None
+    db_session.commit()
+
+    fake_router = FakeRouter([
+        StreamEvent(type="error", error_message="boom", error_code="X"),
+    ])
+    prep = prepare_generation(
+        db_session, chapter_id=ch.id, beat_text="x", instruction="",
+        involved_character_ids=[chars[1].id], location_id=loc.id,
+        model_task="writer_long", max_tokens=4096, router=fake_router,
+    )
+    list(stream_generation(db_session, prep, router=fake_router))
+
+    db_session.expire_all()
+    chapter = db_session.get(Chapter, ch.id)
+    # Untouched
+    assert chapter.last_involved_character_ids == [chars[0].id]
+    assert chapter.last_location_id is None

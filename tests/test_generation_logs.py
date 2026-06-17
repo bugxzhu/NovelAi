@@ -41,9 +41,35 @@ def _seed_two_chapters_with_logs(client, fake_router):
     return pid, ch1, ch2
 
 
-def test_list_requires_chapter_id(client):
+def test_list_requires_chapter_or_project_id(client):
+    """Neither param -> 422."""
     r = client.get("/api/generation-logs")
     assert r.status_code == 422
+
+
+def test_list_with_project_id_returns_all_project_logs(client, fake_router):
+    """list endpoint accepts project_id and returns all logs in that project."""
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    c1 = client.post("/api/characters",
+                     json={"project_id": pid, "name": "C1"}).json()["id"]
+    ch1 = client.post("/api/chapters",
+                      json={"project_id": pid, "order_index": 1,
+                            "title": "CH1"}).json()["id"]
+    ch2 = client.post("/api/chapters",
+                      json={"project_id": pid, "order_index": 2,
+                            "title": "CH2"}).json()["id"]
+    # Generate once per chapter
+    for ch in (ch1, ch2):
+        with client.stream("POST", f"/api/chapters/{ch}/generate",
+                           json={"beat_text": "x",
+                                 "involved_character_ids": [c1]}) as r:
+            assert r.status_code == 200
+
+    r = client.get(f"/api/generation-logs?project_id={pid}")
+    assert r.status_code == 200
+    logs = r.json()
+    assert len(logs) == 2
+    assert {log["chapter_id"] for log in logs} == {ch1, ch2}
 
 
 def test_list_returns_only_target_chapter(client, fake_router):

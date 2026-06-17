@@ -8,7 +8,7 @@ from app.llm.base import LLMRequest
 from app.llm.prompts import render
 from app.llm.router import ModelRouter, default_router
 from app.memory.retrieval import ContextBundle, assemble_context
-from app.memory.schema import GenerationLog
+from app.memory.schema import Chapter, GenerationLog
 
 
 def _now() -> datetime:
@@ -219,6 +219,13 @@ def _finalize_done(db: Session, log_id: int, text: str, event) -> None:
     log.stop_reason = event.stop_reason
     log.status = "done"
     log.finished_at = _now()
+
+    # M2b: write back chapter default set
+    chapter = db.get(Chapter, log.chapter_id)
+    if chapter is not None:
+        chapter.last_involved_character_ids = list(log.involved_character_ids)
+        chapter.last_location_id = log.location_id
+
     db.commit()
 
 

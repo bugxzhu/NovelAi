@@ -12,6 +12,8 @@ class ChapterBase(BaseModel):
     plot_line_ids: list[int] = []
     summary: str = ""
     content_hash: str = ""
+    last_involved_character_ids: list[int] = []
+    last_location_id: int | None = None
 
 
 class ChapterCreate(ChapterBase):
@@ -27,6 +29,8 @@ class ChapterUpdate(BaseModel):
     plot_line_ids: list[int] | None = None
     summary: str | None = None
     content_hash: str | None = None
+    last_involved_character_ids: list[int] | None = None
+    last_location_id: int | None = None
 
 
 class ChapterRead(ChapterBase, ORMBase, TimestampMixin):

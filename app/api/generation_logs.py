@@ -11,15 +11,24 @@ router = APIRouter()
 
 @router.get("", response_model=list[GenerationLogRead])
 def list_logs(
-    chapter_id: int = Query(...),
+    chapter_id: int | None = Query(default=None),
+    project_id: int | None = Query(default=None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
+    if chapter_id is None and project_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail="must provide chapter_id or project_id",
+        )
+    stmt = select(GenerationLog)
+    if chapter_id is not None:
+        stmt = stmt.where(GenerationLog.chapter_id == chapter_id)
+    else:
+        stmt = stmt.where(GenerationLog.project_id == project_id)
     stmt = (
-        select(GenerationLog)
-        .where(GenerationLog.chapter_id == chapter_id)
-        .order_by(GenerationLog.id.desc())
+        stmt.order_by(GenerationLog.id.desc())
         .limit(limit)
         .offset(offset)
     )

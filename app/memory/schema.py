@@ -112,6 +112,8 @@ class Chapter(Base):
     plot_line_ids: Mapped[list] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")
     content_hash: Mapped[str] = mapped_column(String(64), default="")
+    last_involved_character_ids: Mapped[list] = mapped_column(JSON, default=list)
+    last_location_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now_utc)
     updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
 
