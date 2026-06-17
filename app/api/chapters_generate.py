@@ -8,6 +8,7 @@ from app.agents.writer import prepare_generation, stream_generation
 from app.api.deps import get_db
 from app.llm.router import default_router
 from app.memory.errors import ChapterNotFoundError, InvalidContextError
+from app.memory.schema import GenerationLog
 from app.models.generation import GenerateRequest
 
 router = APIRouter()
@@ -54,6 +55,10 @@ def generate(
                 event_type = event_dict["type"]
                 data = {k: v for k, v in event_dict.items() if k != "type"}
                 yield _format_sse(event_type, data)
+        except GeneratorExit:
+            # Client closed the connection mid-stream; mark the log so it's not orphaned
+            _mark_client_disconnected(db, prep.log.id)
+            raise
         finally:
             db.close()
 
@@ -62,3 +67,18 @@ def generate(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def _mark_client_disconnected(db: Session, log_id: int) -> None:
+    """Mark a generation log as client_disconnected on premature stream termination."""
+    from datetime import UTC, datetime
+
+    log = db.get(GenerationLog, log_id)
+    if log is None:
+        return
+    # Only mark if still streaming (don't override done/failed)
+    if log.status == "streaming":
+        log.status = "client_disconnected"
+        log.stop_reason = "client_disconnected"
+        log.finished_at = datetime.now(UTC)
+        db.commit()
