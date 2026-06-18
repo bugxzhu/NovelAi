@@ -47,7 +47,10 @@ export async function* streamGeneration(
     throw new ApiError(res.status, errBody);
   }
 
-  if (!res.body) return;
+  if (!res.body) {
+    yield { type: "error", message: "empty response body", code: "EmptyBody" };
+    return;
+  }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
