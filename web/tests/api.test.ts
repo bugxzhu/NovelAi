@@ -1,14 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { api, ApiError } from "@/lib/api";
 
+// Must match the default BASE in lib/api.ts (module is evaluated at import time,
+// so env stubs in beforeEach cannot influence it).
 const BASE = "http://127.0.0.1:8005";
 
-beforeEach(() => {
-  vi.stubEnv("NEXT_PUBLIC_API_BASE", BASE);
-});
-
 afterEach(() => {
-  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
