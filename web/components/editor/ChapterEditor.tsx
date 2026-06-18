@@ -1,31 +1,25 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
+import type { MarkdownStorage } from "tiptap-markdown";
 import { extensions } from "./extensions";
 import { EditorToolbar } from "./EditorToolbar";
 import { useChapterAutosave } from "./useChapterAutosave";
 import type { Chapter } from "@/lib/types";
 
-// Type augmentation: tiptap-markdown ships no TypeScript types, so declare
-// the storage shape manually. `getMarkdown()` returns the current document
-// serialized as a Markdown string.
-declare module "@tiptap/core" {
-  interface Storage {
-    markdown?: {
-      getMarkdown: () => string;
-    };
-  }
-}
-
+// TipTap's `Storage` is a generic record and does not auto-merge per-extension
+// storage, so we cast the `markdown` namespace to the package's own typed shape.
 function getMarkdown(editor: Editor): string {
-  return editor.storage.markdown?.getMarkdown() ?? "";
+  const storage = (editor.storage as unknown as Record<string, unknown>).markdown as
+    | MarkdownStorage
+    | undefined;
+  return storage?.getMarkdown() ?? "";
 }
 
 export function ChapterEditor({ chapter }: { chapter: Chapter }) {
   const autosave = useChapterAutosave(chapter.id, chapter.project_id);
-  const editorRef = useRef<ReturnType<typeof useEditor> | null>(null);
 
   const editor = useEditor({
     extensions,
@@ -43,10 +37,6 @@ export function ChapterEditor({ chapter }: { chapter: Chapter }) {
     },
   });
 
-  useEffect(() => {
-    editorRef.current = editor;
-  }, [editor]);
-
   // Expose imperative API for "accept generated text" insertion (StreamView uses this in Task 13)
   useEffect(() => {
     (window as unknown as { __chapterEditor: typeof editor }).__chapterEditor = editor;
@@ -54,6 +44,18 @@ export function ChapterEditor({ chapter }: { chapter: Chapter }) {
       delete (window as unknown as { __chapterEditor?: typeof editor }).__chapterEditor;
     };
   }, [editor]);
+
+  // Flush pending saves of the previous chapter before its editor content is reset.
+  // The cleanup of the previous render runs with the OLD editor still showing OLD content,
+  // so getMarkdown() captures whatever the user typed but hadn't yet persisted.
+  useEffect(() => {
+    return () => {
+      if (editor) {
+        autosave.saveNow(getMarkdown(editor));
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter.id]);
 
   // Reset content when chapter changes
   useEffect(() => {
