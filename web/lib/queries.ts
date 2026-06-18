@@ -7,12 +7,11 @@ import {
 } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
-  Project, ProjectCreate, ProjectUpdate,
-  WorldOverview, WorldOverviewUpdate,
-  LoreEntry, LoreCreate, LoreUpdate,
-  Character, CharacterCreate, CharacterUpdate,
-  Chapter, ChapterCreate, ChapterUpdate,
-  GenerationLogRead,
+  ProjectCreate, ProjectUpdate,
+  WorldOverviewUpdate,
+  LoreCreate, LoreUpdate,
+  CharacterCreate, CharacterUpdate,
+  ChapterCreate, ChapterUpdate,
 } from "./types";
 
 // Projects
@@ -142,13 +141,14 @@ export function useCreateChapter() {
     onSuccess: (data) => qc.invalidateQueries({ queryKey: ["chapters", data.project_id] }),
   });
 }
-export function useUpdateChapter(id: number) {
+// Note: requires projectId for cache scoping. Callers must pass it (e.g. useChapterAutosave(chapterId, projectId)).
+export function useUpdateChapter(id: number, projectId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: ChapterUpdate) => api.updateChapter(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["chapter", id] });
-      qc.invalidateQueries({ queryKey: ["chapters"] });
+      qc.invalidateQueries({ queryKey: ["chapters", projectId] });
     },
   });
 }
