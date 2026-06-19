@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     chapters,
+    chapters_finalize,
     chapters_generate,
     characters,
     deps,
@@ -48,6 +49,8 @@ def create_app() -> FastAPI:
     app.include_router(chapters.router, prefix="/api/chapters", tags=["chapters"])
     app.include_router(chapters_generate.router, prefix="/api/chapters",
                        tags=["chapters_generate"])
+    app.include_router(chapters_finalize.router, prefix="/api/chapters",
+                       tags=["chapters_finalize"])
     app.include_router(llm.router, prefix="/api/llm", tags=["llm"])
     app.include_router(generation_logs.router, prefix="/api/generation-logs",
                        tags=["generation_logs"])
