@@ -35,9 +35,9 @@ export default function ChaptersListPage() {
           }
         >
           {isLoading ? (
-            <p className="text-xs text-[#888] p-2">加载中...</p>
+            <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : !chapters || chapters.length === 0 ? (
-            <p className="text-xs text-[#888] p-2">还没有章节</p>
+            <p className="text-xs text-text-muted p-2">还没有章节</p>
           ) : (
             chapters
               .slice()
@@ -54,7 +54,7 @@ export default function ChaptersListPage() {
         </SidePanel>
       }
       editor={
-        <div className="h-full flex items-center justify-center text-[#888]">
+        <div className="h-full flex items-center justify-center text-text-muted">
           请从左侧选择一个章节
         </div>
       }

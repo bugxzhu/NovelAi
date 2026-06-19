@@ -9,5 +9,5 @@ export default function ProjectHomePage() {
   useEffect(() => {
     router.replace(`/projects/${params.projectId}/chapters`);
   }, [params.projectId, router]);
-  return <div className="p-4 text-[#888]">加载中...</div>;
+  return <div className="p-4 text-text-muted">加载中...</div>;
 }

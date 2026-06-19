@@ -31,7 +31,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 ? "bg-red-950/80 border-red-800 text-red-200"
                 : t.tone === "success"
                 ? "bg-green-950/80 border-green-800 text-green-200"
-                : "bg-[#252526] border-[#3c3c3c] text-[#cccccc]"
+                : "bg-panel border-line text-text"
             }`}
           >
             {t.message}

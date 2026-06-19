@@ -43,15 +43,15 @@ export default function HistoryPage() {
       sidePanel={
         <SidePanel title="历史">
           {isLoading ? (
-            <p className="text-xs text-[#888] p-2">加载中...</p>
+            <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : grouped.length === 0 ? (
-            <p className="text-xs text-[#888] p-2">无生成记录</p>
+            <p className="text-xs text-text-muted p-2">无生成记录</p>
           ) : (
             grouped.map(({ chapterId, items }) => {
               const ch = (chapters ?? []).find((c) => c.id === chapterId);
               return (
                 <div key={chapterId} className="mb-2">
-                  <div className="text-xs text-[#888] px-2 py-1">
+                  <div className="text-xs text-text-muted px-2 py-1">
                     {ch?.title ?? `Chapter ${chapterId}`} ({items.length})
                   </div>
                   {items.map((log) => (
@@ -60,8 +60,8 @@ export default function HistoryPage() {
                       onClick={() => setSelectedId(log.id)}
                       className={`block w-full text-left px-3 py-1.5 rounded text-xs ${
                         selectedId === log.id
-                          ? "bg-[#37373d] text-white"
-                          : "hover:bg-[#2a2a2a] text-[#cccccc]"
+                          ? "bg-active text-white"
+                          : "hover:bg-hover text-text"
                       }`}
                     >
                       #{log.id} · {log.status} ·{" "}
@@ -79,35 +79,35 @@ export default function HistoryPage() {
       editor={
         <div className="h-full overflow-y-auto p-4 text-sm">
           {!detail ? (
-            <p className="text-[#888]">请从左侧选择记录</p>
+            <p className="text-text-muted">请从左侧选择记录</p>
           ) : (
             <div className="space-y-4 max-w-3xl">
-              <div className="text-xs text-[#888]">
+              <div className="text-xs text-text-muted">
                 #{detail.id} · chapter_id={detail.chapter_id} · status={detail.status} ·{" "}
                 input={detail.input_tokens} output={detail.output_tokens}
               </div>
               <details open>
-                <summary className="cursor-pointer text-[#aaa]">Beat + 指令</summary>
-                <pre className="mt-2 p-2 bg-[#1e1e1e] rounded whitespace-pre-wrap text-xs">
+                <summary className="cursor-pointer text-text-muted-bright">Beat + 指令</summary>
+                <pre className="mt-2 p-2 bg-input rounded whitespace-pre-wrap text-xs">
                   {detail.beat_text}
                   {detail.instruction ? `\n\n[指令] ${detail.instruction}` : ""}
                 </pre>
               </details>
               <details>
-                <summary className="cursor-pointer text-[#aaa]">System Prompt</summary>
-                <pre className="mt-2 p-2 bg-[#1e1e1e] rounded whitespace-pre-wrap text-xs">
+                <summary className="cursor-pointer text-text-muted-bright">System Prompt</summary>
+                <pre className="mt-2 p-2 bg-input rounded whitespace-pre-wrap text-xs">
                   {detail.system_prompt}
                 </pre>
               </details>
               <details>
-                <summary className="cursor-pointer text-[#aaa]">User Prompt</summary>
-                <pre className="mt-2 p-2 bg-[#1e1e1e] rounded whitespace-pre-wrap text-xs">
+                <summary className="cursor-pointer text-text-muted-bright">User Prompt</summary>
+                <pre className="mt-2 p-2 bg-input rounded whitespace-pre-wrap text-xs">
                   {detail.user_prompt}
                 </pre>
               </details>
               <details>
-                <summary className="cursor-pointer text-[#aaa]">Generated Text</summary>
-                <pre className="mt-2 p-2 bg-[#1e1e1e] rounded whitespace-pre-wrap text-xs">
+                <summary className="cursor-pointer text-text-muted-bright">Generated Text</summary>
+                <pre className="mt-2 p-2 bg-input rounded whitespace-pre-wrap text-xs">
                   {detail.generated_text ?? "(empty)"}
                 </pre>
               </details>

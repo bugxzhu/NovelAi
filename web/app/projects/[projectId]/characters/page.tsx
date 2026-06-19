@@ -33,9 +33,9 @@ export default function CharactersPage() {
           }
         >
           {isLoading ? (
-            <p className="text-xs text-[#888] p-2">加载中...</p>
+            <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : !characters || characters.length === 0 ? (
-            <p className="text-xs text-[#888] p-2">还没有人物</p>
+            <p className="text-xs text-text-muted p-2">还没有人物</p>
           ) : (
             characters.map((c) => (
               <button
@@ -43,11 +43,11 @@ export default function CharactersPage() {
                 onClick={() => setSelectedId(c.id)}
                 className={`block w-full text-left px-3 py-2 rounded text-sm ${
                   selectedId === c.id
-                    ? "bg-[#37373d] text-white"
-                    : "hover:bg-[#2a2a2a] text-[#cccccc]"
+                    ? "bg-active text-white"
+                    : "hover:bg-hover text-text"
                 }`}
               >
-                {c.name || "未命名"} <span className="text-[#888]">({c.role})</span>
+                {c.name || "未命名"} <span className="text-text-muted">({c.role})</span>
               </button>
             ))
           )}

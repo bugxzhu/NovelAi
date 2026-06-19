@@ -101,7 +101,7 @@ export function CharacterForm({
   };
 
   if (!character) {
-    return <div className="p-4 text-[#888]">请从左侧选择或新建人物</div>;
+    return <div className="p-4 text-text-muted">请从左侧选择或新建人物</div>;
   }
 
   return (
@@ -124,17 +124,17 @@ export function CharacterForm({
 
       {TEXT_FIELDS.map((f) => (
         <div key={f.key}>
-          <label className="text-xs text-[#aaa] block mb-1">{f.label}</label>
+          <label className="text-xs text-text-muted-bright block mb-1">{f.label}</label>
           <input
             value={(form[f.key] as string) ?? ""}
             onChange={(e) => setText(f.key, e.target.value)}
-            className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc]"
+            className="w-full bg-input border border-line rounded p-2 text-text"
           />
         </div>
       ))}
 
       <div>
-        <label className="text-xs text-[#aaa] block mb-1">所属势力</label>
+        <label className="text-xs text-text-muted-bright block mb-1">所属势力</label>
         <div className="flex flex-wrap gap-1">
           {factions.map((f) => (
             <Chip
@@ -149,7 +149,7 @@ export function CharacterForm({
       </div>
 
       <div>
-        <label className="text-xs text-[#aaa] block mb-1">活动地点</label>
+        <label className="text-xs text-text-muted-bright block mb-1">活动地点</label>
         <div className="flex flex-wrap gap-1">
           {locations.map((l) => (
             <Chip

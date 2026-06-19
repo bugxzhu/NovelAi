@@ -29,7 +29,7 @@ export function StreamView({ chapterId }: { chapterId: number }) {
 
   if (events.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-xs text-[#888]">
+      <div className="h-full flex items-center justify-center text-xs text-text-muted">
         {status === "preparing"
           ? "正在组装上下文…"
           : "暂无生成。点左侧 ✨ 生成 开始。"}
@@ -40,27 +40,27 @@ export function StreamView({ chapterId }: { chapterId: number }) {
   return (
     <div className="h-full overflow-y-auto p-3 space-y-3 text-xs">
       {meta && meta.type === "meta" && (
-        <div className="text-[#888]">
-          <span className="text-[#aaa]">[meta]</span> log_id={meta.generation_log_id} · model={meta.model}
+        <div className="text-text-muted">
+          <span className="text-text-muted-bright">[meta]</span> log_id={meta.generation_log_id} · model={meta.model}
         </div>
       )}
 
       {contextEvent && contextEvent.type === "context" && (
-        <details className="bg-[#1e1e1e] rounded p-2">
-          <summary className="cursor-pointer text-[#888]">
+        <details className="bg-input rounded p-2">
+          <summary className="cursor-pointer text-text-muted">
             📋 常驻层预览（{contextEvent.context_bundle.characters.length} 人物 ·{" "}
             {contextEvent.context_bundle.location_lore.length} 地点）
           </summary>
-          <pre className="mt-2 text-[10px] text-[#aaa] whitespace-pre-wrap">
+          <pre className="mt-2 text-[10px] text-text-muted-bright whitespace-pre-wrap">
             {JSON.stringify(contextEvent.context_bundle, null, 2)}
           </pre>
         </details>
       )}
 
-      <div className="font-serif text-sm leading-relaxed whitespace-pre-wrap min-h-[120px] text-[#cccccc]">
+      <div className="font-serif text-sm leading-relaxed whitespace-pre-wrap min-h-[120px] text-text">
         {generatedText}
         {(status === "streaming" || status === "preparing") && (
-          <span className="inline-block w-2 h-4 bg-[#888] animate-pulse ml-0.5" />
+          <span className="inline-block w-2 h-4 bg-text-muted animate-pulse ml-0.5" />
         )}
       </div>
 
@@ -71,8 +71,8 @@ export function StreamView({ chapterId }: { chapterId: number }) {
       )}
 
       {doneEvent && doneEvent.type === "done" && (
-        <div className="flex items-center justify-between pt-2 border-t border-[#3c3c3c]">
-          <span className="text-[#888]">
+        <div className="flex items-center justify-between pt-2 border-t border-line">
+          <span className="text-text-muted">
             ✓ 完成 · 输入 {doneEvent.input_tokens} / 输出 {doneEvent.output_tokens} tokens
           </span>
           <div className="flex gap-2">

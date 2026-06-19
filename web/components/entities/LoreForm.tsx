@@ -70,7 +70,7 @@ export function LoreForm({
   };
 
   if (!lore) {
-    return <div className="p-4 text-[#888]">请从左侧选择或新建条目</div>;
+    return <div className="p-4 text-text-muted">请从左侧选择或新建条目</div>;
   }
 
   // For locations, parent candidates are other locations of same project (excluding self + descendants)
@@ -97,7 +97,7 @@ export function LoreForm({
       </div>
 
       <div>
-        <label className="text-xs text-[#aaa] block mb-1">类型</label>
+        <label className="text-xs text-text-muted-bright block mb-1">类型</label>
         <select
           value={(form.type as LoreType) ?? lore.type}
           onChange={(e) => {
@@ -105,7 +105,7 @@ export function LoreForm({
             setForm({ ...form, type: v });
             save({ ...form, type: v });
           }}
-          className="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc]"
+          className="bg-input border border-line rounded p-2 text-text"
         >
           {["location", "faction", "item", "organization", "concept", "custom"].map((t) => (
             <option key={t} value={t}>{t}</option>
@@ -115,19 +115,19 @@ export function LoreForm({
 
       {TEXT_FIELDS.map((f) => (
         <div key={f.key}>
-          <label className="text-xs text-[#aaa] block mb-1">{f.label}</label>
+          <label className="text-xs text-text-muted-bright block mb-1">{f.label}</label>
           {f.rows ? (
             <textarea
               value={(form[f.key] as string) ?? ""}
               onChange={(e) => setText(f.key, e.target.value)}
               rows={f.rows}
-              className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc]"
+              className="w-full bg-input border border-line rounded p-2 text-text"
             />
           ) : (
             <input
               value={(form[f.key] as string) ?? ""}
               onChange={(e) => setText(f.key, e.target.value)}
-              className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc]"
+              className="w-full bg-input border border-line rounded p-2 text-text"
             />
           )}
         </div>
@@ -135,7 +135,7 @@ export function LoreForm({
 
       {lore.type === "location" && (
         <div>
-          <label className="text-xs text-[#aaa] block mb-1">上级地点</label>
+          <label className="text-xs text-text-muted-bright block mb-1">上级地点</label>
           <select
             value={form.parent_id ?? lore.parent_id ?? ""}
             onChange={(e) => {
@@ -143,7 +143,7 @@ export function LoreForm({
               setForm({ ...form, parent_id: v });
               save({ ...form, parent_id: v });
             }}
-            className="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc]"
+            className="bg-input border border-line rounded p-2 text-text"
           >
             <option value="">（顶级）</option>
             {sameTypeLocations.map((l) => (

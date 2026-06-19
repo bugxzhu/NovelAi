@@ -27,7 +27,7 @@ export default function ChapterPage() {
   }, [chapter?.id, hydrate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading || !chapter) {
-    return <div className="flex-1 p-8 text-[#888]">加载章节...</div>;
+    return <div className="flex-1 p-8 text-text-muted">加载章节...</div>;
   }
 
   const handleCreate = async () => {

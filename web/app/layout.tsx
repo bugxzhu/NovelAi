@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { ThemeScript } from "./ThemeScript";
+import { ThemeApplier } from "./ThemeApplier";
 
 export const metadata: Metadata = {
   title: "NovelAI",
@@ -13,9 +15,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <ThemeApplier />
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -59,19 +59,19 @@ export function WorldOverviewForm({ projectId }: { projectId: number }) {
     save(next);
   };
 
-  if (isLoading) return <div className="p-4 text-[#888]">加载中...</div>;
+  if (isLoading) return <div className="p-4 text-text-muted">加载中...</div>;
 
   return (
     <div className="p-4 space-y-4 max-w-2xl">
       <h2 className="text-lg">世界观</h2>
       {FIELDS.map((f) => (
         <div key={f.key}>
-          <label className="text-xs text-[#aaa] block mb-1">{f.label}</label>
+          <label className="text-xs text-text-muted-bright block mb-1">{f.label}</label>
           <textarea
             value={(form[f.key] as string) ?? ""}
             onChange={(e) => handleChange(f.key, e.target.value)}
             rows={f.rows ?? 1}
-            className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc]"
+            className="w-full bg-input border border-line rounded p-2 text-text"
           />
         </div>
       ))}

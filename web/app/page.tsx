@@ -6,6 +6,7 @@ import { useProjects, useCreateProject } from "@/lib/queries";
 import { ProjectCard } from "@/components/entities/ProjectCard";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function HomePage() {
   const router = useRouter();
@@ -31,15 +32,18 @@ export default function HomePage() {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl">NovelAI</h1>
-          <Button variant="primary" onClick={handleCreate} disabled={creating}>
-            + 新建项目
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="primary" onClick={handleCreate} disabled={creating}>
+              + 新建项目
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
-          <p className="text-[#888]">加载中...</p>
+          <p className="text-text-muted">加载中...</p>
         ) : !projects || projects.length === 0 ? (
-          <p className="text-[#888]">还没有项目。点右上角&quot;新建项目&quot;开始。</p>
+          <p className="text-text-muted">还没有项目。点右上角&quot;新建项目&quot;开始。</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => (

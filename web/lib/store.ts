@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 export type ActiveView = "chapters" | "characters" | "lore" | "history" | "search";
 export type GenerationStatus = "idle" | "preparing" | "streaming" | "done" | "error";
+export type Theme = "light" | "dark";
 
 interface UIState {
   // Layout (persisted)
@@ -10,6 +11,9 @@ interface UIState {
   contextPanelWidth: number;
   bottomPanelHeight: number;
   bottomPanelOpen: boolean;
+
+  // Theme (persisted)
+  theme: Theme;
 
   // Ephemeral (NOT persisted)
   activeView: ActiveView;
@@ -23,6 +27,8 @@ interface UIState {
   setBottomPanelOpen: (open: boolean) => void;
   setActiveView: (v: ActiveView) => void;
   setGenerationStatus: (s: GenerationStatus) => void;
+  setTheme: (t: Theme) => void;
+  toggleTheme: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -32,6 +38,8 @@ export const useUIStore = create<UIState>()(
       contextPanelWidth: 240,
       bottomPanelHeight: 200,
       bottomPanelOpen: false,
+      // Default to dark since the original spec was VS Code dark.
+      theme: "dark",
       activeView: "chapters",
       generationStatus: "idle",
 
@@ -42,6 +50,9 @@ export const useUIStore = create<UIState>()(
       setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
       setActiveView: (v) => set({ activeView: v }),
       setGenerationStatus: (s) => set({ generationStatus: s }),
+      setTheme: (t) => set({ theme: t }),
+      toggleTheme: () =>
+        set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
     }),
     {
       name: "m2b-ui",
@@ -51,6 +62,7 @@ export const useUIStore = create<UIState>()(
         contextPanelWidth: s.contextPanelWidth,
         bottomPanelHeight: s.bottomPanelHeight,
         bottomPanelOpen: s.bottomPanelOpen,
+        theme: s.theme,
       }),
     }
   )

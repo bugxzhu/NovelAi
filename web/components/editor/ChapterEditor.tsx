@@ -32,7 +32,7 @@ export function ChapterEditor({ chapter }: { chapter: Chapter }) {
     },
     editorProps: {
       attributes: {
-        class: "prose prose-invert max-w-none focus:outline-none min-h-[60vh] p-8 font-serif leading-relaxed",
+        class: "prose max-w-none focus:outline-none min-h-[60vh] p-8 font-serif leading-relaxed",
       },
     },
   });

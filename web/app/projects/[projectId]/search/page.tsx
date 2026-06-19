@@ -37,14 +37,14 @@ export default function SearchPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="搜索章节/人物/设定…"
-            className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 text-[#cccccc] text-sm"
+            className="w-full bg-input border border-line rounded p-2 text-text text-sm"
           />
         </SidePanel>
       }
       editor={
         <div className="h-full overflow-y-auto p-4 text-sm space-y-4">
           {!needle ? (
-            <p className="text-[#888]">输入关键字搜索项目内容（substring 匹配）</p>
+            <p className="text-text-muted">输入关键字搜索项目内容（substring 匹配）</p>
           ) : (
             <>
               <Section title={`章节 (${chapterHits.length})`}>
@@ -52,9 +52,9 @@ export default function SearchPage() {
                   <Link
                     key={c.id}
                     href={`/projects/${pid}/chapters/${c.id}`}
-                    className="block px-2 py-1 hover:bg-[#2a2a2a] rounded"
+                    className="block px-2 py-1 hover:bg-hover rounded"
                   >
-                    {c.title} <span className="text-[#888]">#{c.id}</span>
+                    {c.title} <span className="text-text-muted">#{c.id}</span>
                   </Link>
                 ))}
               </Section>
@@ -63,9 +63,9 @@ export default function SearchPage() {
                   <Link
                     key={c.id}
                     href={`/projects/${pid}/characters`}
-                    className="block px-2 py-1 hover:bg-[#2a2a2a] rounded"
+                    className="block px-2 py-1 hover:bg-hover rounded"
                   >
-                    {c.name} <span className="text-[#888]">({c.role})</span>
+                    {c.name} <span className="text-text-muted">({c.role})</span>
                   </Link>
                 ))}
               </Section>
@@ -74,9 +74,9 @@ export default function SearchPage() {
                   <Link
                     key={l.id}
                     href={`/projects/${pid}/lore`}
-                    className="block px-2 py-1 hover:bg-[#2a2a2a] rounded"
+                    className="block px-2 py-1 hover:bg-hover rounded"
                   >
-                    {l.name} <span className="text-[#888]">({l.type})</span>
+                    {l.name} <span className="text-text-muted">({l.type})</span>
                   </Link>
                 ))}
               </Section>
@@ -97,7 +97,7 @@ function Section({
 }) {
   return (
     <div>
-      <h3 className="text-xs text-[#888] mb-1">{title}</h3>
+      <h3 className="text-xs text-text-muted mb-1">{title}</h3>
       {children}
     </div>
   );

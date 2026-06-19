@@ -7,10 +7,10 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const STYLES: Record<Variant, string> = {
-  primary: "bg-[#0e639c] hover:bg-[#1177bb] text-white",
-  ghost: "bg-transparent hover:bg-[#3a3a3a] text-[#cccccc]",
+  primary: "bg-accent hover:bg-accent-hover text-white",
+  ghost: "bg-transparent hover:bg-hover-strong text-text",
   danger: "bg-red-900 hover:bg-red-800 text-red-100",
-  subtle: "bg-[#3c3c3c] hover:bg-[#4c4c4c] text-[#cccccc]",
+  subtle: "bg-button hover:bg-button-hover text-text",
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(

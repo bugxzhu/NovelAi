@@ -24,17 +24,17 @@ export function ChapterWorkspaceGrid({
       <div className="flex-1 flex overflow-hidden">
         <aside
           style={{ width: sidePanelWidth }}
-          className="shrink-0 border-r border-[#3c3c3c] overflow-hidden bg-[#252526]"
+          className="shrink-0 border-r border-line overflow-hidden bg-panel"
         >
           {sidePanel}
         </aside>
-        <main className="flex-1 min-w-[500px] overflow-hidden bg-[#1e1e1e]">
+        <main className="flex-1 min-w-[500px] overflow-hidden bg-input">
           {editor}
         </main>
         {contextPanel && (
           <aside
             style={{ width: contextPanelWidth }}
-            className="shrink-0 border-l border-[#3c3c3c] overflow-hidden bg-[#252526]"
+            className="shrink-0 border-l border-line overflow-hidden bg-panel"
           >
             {contextPanel}
           </aside>
@@ -43,7 +43,7 @@ export function ChapterWorkspaceGrid({
       {bottomPanel && (
         <div
           style={{ height: bottomPanelOpen ? bottomPanelHeight : 28 }}
-          className="shrink-0 border-t border-[#3c3c3c] bg-[#252526] overflow-hidden transition-[height] duration-150"
+          className="shrink-0 border-t border-line bg-panel overflow-hidden transition-[height] duration-150"
         >
           {bottomPanel}
         </div>

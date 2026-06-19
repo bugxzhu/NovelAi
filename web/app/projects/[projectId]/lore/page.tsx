@@ -57,8 +57,8 @@ export default function LorePage() {
                 }}
                 className={`px-2 py-0.5 rounded text-xs ${
                   tab === t.key
-                    ? "bg-[#0e639c] text-white"
-                    : "bg-[#3c3c3c] text-[#cccccc]"
+                    ? "bg-accent text-white"
+                    : "bg-button text-text"
                 }`}
               >
                 {t.label}
@@ -73,11 +73,11 @@ export default function LorePage() {
             </div>
           )}
           {tab === "overview" ? (
-            <p className="text-xs text-[#888] p-2">
+            <p className="text-xs text-text-muted p-2">
               {worldOverview ? "点右侧编辑" : "右侧创建"}
             </p>
           ) : filtered.length === 0 ? (
-            <p className="text-xs text-[#888] p-2">无</p>
+            <p className="text-xs text-text-muted p-2">无</p>
           ) : (
             filtered.map((l) => (
               <button
@@ -85,8 +85,8 @@ export default function LorePage() {
                 onClick={() => setSelectedId(l.id)}
                 className={`block w-full text-left px-3 py-2 rounded text-sm ${
                   selectedId === l.id
-                    ? "bg-[#37373d] text-white"
-                    : "hover:bg-[#2a2a2a] text-[#cccccc]"
+                    ? "bg-active text-white"
+                    : "hover:bg-hover text-text"
                 }`}
               >
                 {l.name}

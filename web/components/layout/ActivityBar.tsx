@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const ITEMS = [
   { icon: "📚", label: "章节", path: "chapters", view: "chapters" as const },
@@ -15,7 +16,7 @@ export function ActivityBar({ projectId }: { projectId: number }) {
   const router = useRouter();
   const base = `/projects/${projectId}`;
   return (
-    <aside className="w-10 bg-[#333] flex flex-col items-center py-2 gap-1 shrink-0">
+    <aside className="w-10 bg-sidebar flex flex-col items-center py-2 gap-1 shrink-0">
       {ITEMS.map((it) => {
         const isActive = pathname.startsWith(`${base}/${it.path}`);
         return (
@@ -25,14 +26,16 @@ export function ActivityBar({ projectId }: { projectId: number }) {
             title={it.label}
             className={`w-8 h-8 flex flex-col items-center justify-center rounded ${
               isActive
-                ? "bg-[#094771] text-white"
-                : "hover:bg-[#3a3a3a] text-[#888]"
+                ? "bg-accent-strong text-white"
+                : "hover:bg-hover-strong text-text-muted"
             }`}
           >
             <span className="text-base leading-none">{it.icon}</span>
           </button>
         );
       })}
+      <div className="flex-1" />
+      <ThemeToggle />
     </aside>
   );
 }
