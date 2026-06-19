@@ -20,3 +20,7 @@ class InvalidContextError(Exception):
         if self.invalid_location_id is not None:
             parts.append(f"invalid location_id={self.invalid_location_id}")
         super().__init__("; ".join(parts) or "invalid context")
+
+
+class ExtractionError(Exception):
+    """LLM extraction failed (invalid JSON, missing fields, etc.)."""

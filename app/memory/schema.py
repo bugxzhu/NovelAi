@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import ForeignKey, Integer, String, Text, JSON
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.memory.base import Base
@@ -155,3 +155,40 @@ class GenerationLog(Base):
 
     created_at: Mapped[datetime] = mapped_column(default=_now_utc)
     updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+
+class PendingUpdate(Base):
+    __tablename__ = "pending_updates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
+
+    update_type: Mapped[str] = mapped_column(String(20), nullable=False, default="hard_fact")
+    operation: Mapped[str] = mapped_column(String(10), nullable=False)  # 'create' | 'update'
+    target_table: Mapped[str] = mapped_column(String(50), nullable=False)  # 'characters' | 'lore_entries'
+    target_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    proposed_change: Mapped[dict] = mapped_column(JSON, default=dict)
+    reason: Mapped[str] = mapped_column(Text, default="")
+
+    auto: Mapped[bool] = mapped_column(default=True)
+    extractor_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    extractor_log_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+
+    decided_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    decision_note: Mapped[str] = mapped_column(Text, default="")
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+    __table_args__ = (
+        Index("idx_pending_project_status", "project_id", "status"),
+        Index("idx_pending_chapter", "chapter_id"),
+    )
