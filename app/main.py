@@ -13,6 +13,7 @@ from app.api import (
     health,
     llm,
     lore,
+    pending_updates,
     projects,
     world,
 )
@@ -54,6 +55,8 @@ def create_app() -> FastAPI:
     app.include_router(llm.router, prefix="/api/llm", tags=["llm"])
     app.include_router(generation_logs.router, prefix="/api/generation-logs",
                        tags=["generation_logs"])
+    app.include_router(pending_updates.router, prefix="/api/pending-updates",
+                       tags=["pending_updates"])
     return app
 
 
