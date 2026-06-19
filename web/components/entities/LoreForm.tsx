@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLore, useUpdateLore, useDeleteLore } from "@/lib/queries";
 import { debounce } from "@/lib/debounce";
 import { Button } from "@/components/ui/Button";
@@ -41,12 +41,27 @@ export function LoreForm({
     }
   }, [lore?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = debounce((value: LoreUpdate) => {
-    if (!lore) return;
-    update.mutate(value, {
-      onError: (e) => toast(`保存失败: ${(e as Error).message}`, "error"),
-    });
-  }, 500);
+  // Capture the latest mutation/toast/lore in refs so the stable debounced fn
+  // (created once via useMemo) always calls into the current closure rather than a
+  // stale one. Without this, recreating debounce() per render strands pending
+  // timers from prior renders and can fire stale trailing saves.
+  const updateRef = useRef(update);
+  updateRef.current = update;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const loreRef = useRef(lore);
+  loreRef.current = lore;
+
+  const save = useMemo(
+    () =>
+      debounce((value: LoreUpdate) => {
+        if (!loreRef.current) return;
+        updateRef.current.mutate(value, {
+          onError: (e) => toastRef.current(`保存失败: ${(e as Error).message}`, "error"),
+        });
+      }, 500),
+    []
+  );
 
   const setText = (key: keyof LoreUpdate, v: string) => {
     const next = { ...form, [key]: v };
