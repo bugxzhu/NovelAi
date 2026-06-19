@@ -1,0 +1,24 @@
+# 项目背景
+{{ project.title }} · {{ project.genre }}
+{{ project.premise }}
+
+# 本章信息
+标题：{{ chapter.title }}
+正文：
+---
+{{ chapter.content }}
+---
+
+# 项目现有实体（不要重复抽取）
+
+## 已有人物（{{ existing_characters|length }} 个）
+{% for c in existing_characters %}
+- {{ c.name }}（{{ c.role }}）：{{ c.background }} {{ c.motivation }} {{ c.appearance }} {{ c.current_state }}
+{% endfor %}
+
+## 已有设定（{{ existing_lore|length }} 个）
+{% for l in existing_lore %}
+- [{{ l.type }}] {{ l.name }}：{{ l.description }}
+{% endfor %}
+
+请抽取本章的新实体和描述补充。
