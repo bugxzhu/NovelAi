@@ -18,7 +18,13 @@ function getMarkdown(editor: Editor): string {
   return storage?.getMarkdown() ?? "";
 }
 
-export function ChapterEditor({ chapter }: { chapter: Chapter }) {
+export function ChapterEditor({
+  chapter,
+  onDelete,
+}: {
+  chapter: Chapter;
+  onDelete?: () => void;
+}) {
   const autosave = useChapterAutosave(chapter.id, chapter.project_id);
 
   const editor = useEditor({
@@ -72,7 +78,7 @@ export function ChapterEditor({ chapter }: { chapter: Chapter }) {
 
   return (
     <div className="flex flex-col h-full">
-      <EditorToolbar editor={editor} title={chapter.title} charCount={charCount} />
+      <EditorToolbar editor={editor} title={chapter.title} charCount={charCount} onDelete={onDelete} />
       <EditorContent editor={editor} className="flex-1 overflow-y-auto" />
     </div>
   );
