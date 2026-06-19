@@ -4,7 +4,7 @@ import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { streamGeneration, type GenerationEvent } from "@/lib/sse";
 import { ApiError } from "@/lib/api";
-import { useUIStore, useGenerationStore } from "@/lib/store";
+import { useUIStore, useGenerationStore, DEFAULT_CHAPTER_STATE } from "@/lib/store";
 import type { GenerateRequest } from "@/lib/types";
 
 function formatApiError(e: ApiError): string {
@@ -32,12 +32,7 @@ export function useGenerate(chapterId: number) {
   const qc = useQueryClient();
   const setGenerationStatus = useUIStore((s) => s.setGenerationStatus);
   const chapterState = useGenerationStore(
-    (s) => s.chapters[chapterId] ?? {
-      events: [],
-      generatedText: "",
-      status: "idle" as const,
-      error: null,
-    }
+    (s) => s.chapters[chapterId] ?? DEFAULT_CHAPTER_STATE
   );
   const setChapter = useGenerationStore((s) => s.setChapter);
   const resetChapter = useGenerationStore((s) => s.resetChapter);

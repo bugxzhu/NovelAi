@@ -101,7 +101,7 @@ interface GenerationStore {
   resetChapter: (id: number) => void;
 }
 
-const DEFAULT_CHAPTER_STATE: ChapterGenerationState = {
+export const DEFAULT_CHAPTER_STATE: ChapterGenerationState = {
   events: [],
   generatedText: "",
   status: "idle",
