@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useUIStore, useGenerateParams } from "@/lib/store";
+import { useUIStore, useGenerateParams, useGenerationStore } from "@/lib/store";
 
 beforeEach(() => {
   localStorage.clear();
@@ -15,6 +15,7 @@ beforeEach(() => {
     involvedCharacterIds: [],
     locationId: null,
   });
+  useGenerationStore.setState({ chapters: {} });
 });
 
 describe("useUIStore", () => {
@@ -67,6 +68,58 @@ describe("useGenerateParams", () => {
     expect(useGenerateParams.getState()).toMatchObject({
       involvedCharacterIds: [3, 4],
       locationId: 9,
+    });
+  });
+});
+
+describe("useGenerationStore", () => {
+  it("getChapter returns defaults for unknown id", () => {
+    const s = useGenerationStore.getState().getChapter(42);
+    expect(s).toEqual({
+      events: [],
+      generatedText: "",
+      status: "idle",
+      error: null,
+    });
+  });
+
+  it("setChapter merges patch object", () => {
+    useGenerationStore.getState().setChapter(1, { status: "preparing" });
+    expect(useGenerationStore.getState().chapters[1].status).toBe("preparing");
+    expect(useGenerationStore.getState().chapters[1].events).toEqual([]);
+  });
+
+  it("setChapter accepts updater function reading prev", () => {
+    useGenerationStore.getState().setChapter(1, { events: [], generatedText: "" });
+    useGenerationStore.getState().setChapter(1, (prev) => ({
+      generatedText: prev.generatedText + "abc",
+    }));
+    useGenerationStore.getState().setChapter(1, (prev) => ({
+      generatedText: prev.generatedText + "def",
+    }));
+    expect(useGenerationStore.getState().chapters[1].generatedText).toBe("abcdef");
+  });
+
+  it("different chapterIds are independent", () => {
+    useGenerationStore.getState().setChapter(1, { status: "streaming" });
+    useGenerationStore.getState().setChapter(2, { status: "done" });
+    expect(useGenerationStore.getState().chapters[1].status).toBe("streaming");
+    expect(useGenerationStore.getState().chapters[2].status).toBe("done");
+  });
+
+  it("resetChapter restores defaults", () => {
+    useGenerationStore.getState().setChapter(1, {
+      status: "error",
+      error: "boom",
+      events: [{ type: "token", text: "x" }] as never,
+      generatedText: "x",
+    });
+    useGenerationStore.getState().resetChapter(1);
+    expect(useGenerationStore.getState().chapters[1]).toEqual({
+      events: [],
+      generatedText: "",
+      status: "idle",
+      error: null,
     });
   });
 });

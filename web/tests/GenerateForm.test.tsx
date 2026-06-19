@@ -14,6 +14,7 @@ vi.mock("@/components/generation/useGenerate", () => ({
     start: vi.fn(),
     cancel: vi.fn(),
     reset: vi.fn(),
+    retry: vi.fn(),
   }),
 }));
 

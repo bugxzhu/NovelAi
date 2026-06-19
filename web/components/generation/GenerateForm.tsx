@@ -5,10 +5,8 @@ import { useParams } from "next/navigation";
 import { useCharacters, useLore } from "@/lib/queries";
 import { useGenerateParams } from "@/lib/store";
 import { useGenerate } from "./useGenerate";
-import { ApiError } from "@/lib/api";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
-import { useToast } from "@/components/ui/Toast";
 import type { ModelTask } from "@/lib/types";
 
 export function GenerateForm({ chapterId }: { chapterId: number }) {
@@ -24,7 +22,6 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
   const [modelTask, setModelTask] = useState<ModelTask>("writer_long");
 
   const { start, cancel, status } = useGenerate(chapterId);
-  const toast = useToast();
 
   const toggleChar = (id: number) => {
     const next = involvedCharacterIds.includes(id)
@@ -43,34 +40,8 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
         model_task: modelTask,
         max_tokens: 4096,
       });
-    } catch (e) {
-      if (e instanceof ApiError) {
-        if (e.status === 422) {
-          const detail = (e.body as { detail?: unknown } | null)?.detail;
-          if (
-            detail &&
-            typeof detail === "object" &&
-            "error" in detail &&
-            (detail as { error?: string }).error === "invalid_context"
-          ) {
-            const d = detail as {
-              invalid_character_ids?: number[];
-              invalid_location_id?: number | null;
-            };
-            toast(
-              `无效 ID：人物 ${d.invalid_character_ids?.join(", ") || "无"}；` +
-                `地点 ${d.invalid_location_id ?? "无"}`,
-              "error"
-            );
-          } else if (Array.isArray(detail)) {
-            toast(detail[0]?.msg ?? `HTTP ${e.status}`, "error");
-          } else {
-            toast(`HTTP ${e.status}`, "error");
-          }
-        } else {
-          toast(`HTTP ${e.status}`, "error");
-        }
-      }
+    } catch {
+      // Error already captured in shared generation state; StreamView displays it
     }
   };
 

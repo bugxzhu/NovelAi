@@ -2,10 +2,12 @@
 
 import { useGenerate } from "./useGenerate";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { Editor } from "@tiptap/react";
 
 export function StreamView({ chapterId }: { chapterId: number }) {
-  const { events, generatedText, status, reset, error } = useGenerate(chapterId);
+  const { events, generatedText, status, reset, retry, error } = useGenerate(chapterId);
+  const toast = useToast();
 
   const meta = events.find((e) => e.type === "meta");
   const contextEvent = events.find((e) => e.type === "context");
@@ -13,7 +15,10 @@ export function StreamView({ chapterId }: { chapterId: number }) {
 
   const handleAccept = () => {
     const editor = (window as unknown as { __chapterEditor?: Editor }).__chapterEditor;
-    if (!editor) return;
+    if (!editor) {
+      toast("编辑器尚未就绪，请稍候再试", "error");
+      return;
+    }
     if (!generatedText) return;
     editor.chain().focus().insertContent(generatedText).run();
     // Trigger immediate save by simulating blur — ChapterEditor's onBlur handler
@@ -25,7 +30,9 @@ export function StreamView({ chapterId }: { chapterId: number }) {
   if (events.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-xs text-[#888]">
-        暂无生成。点左侧 ✨ 生成 开始。
+        {status === "preparing"
+          ? "正在组装上下文…"
+          : "暂无生成。点左侧 ✨ 生成 开始。"}
       </div>
     );
   }
@@ -69,7 +76,7 @@ export function StreamView({ chapterId }: { chapterId: number }) {
             ✓ 完成 · 输入 {doneEvent.input_tokens} / 输出 {doneEvent.output_tokens} tokens
           </span>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={reset}>
+            <Button variant="ghost" onClick={retry}>
               重试
             </Button>
             <Button variant="primary" onClick={handleAccept} disabled={!generatedText}>

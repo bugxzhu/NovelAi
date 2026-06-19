@@ -1,79 +1,119 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { streamGeneration, type GenerationEvent } from "@/lib/sse";
 import { ApiError } from "@/lib/api";
-import { useUIStore } from "@/lib/store";
+import { useUIStore, useGenerationStore } from "@/lib/store";
 import type { GenerateRequest } from "@/lib/types";
+
+function formatApiError(e: ApiError): string {
+  const detail = (e.body as { detail?: unknown } | null)?.detail;
+  if (detail && typeof detail === "object" && "error" in detail) {
+    const d = detail as {
+      error: string;
+      invalid_character_ids?: number[];
+      invalid_location_id?: number | null;
+    };
+    if (d.error === "invalid_context") {
+      return (
+        `无效 ID：人物 ${d.invalid_character_ids?.join(", ") || "无"}；` +
+        `地点 ${d.invalid_location_id ?? "无"}`
+      );
+    }
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    return (detail[0] as { msg?: string }).msg ?? `HTTP ${e.status}`;
+  }
+  return `HTTP ${e.status}`;
+}
 
 export function useGenerate(chapterId: number) {
   const qc = useQueryClient();
   const setGenerationStatus = useUIStore((s) => s.setGenerationStatus);
-  const [events, setEvents] = useState<GenerationEvent[]>([]);
-  const [generatedText, setGeneratedText] = useState("");
-  const [status, setStatus] = useState<
-    "idle" | "preparing" | "streaming" | "done" | "error"
-  >("idle");
-  const [error, setError] = useState<string | null>(null);
+  const chapterState = useGenerationStore(
+    (s) => s.chapters[chapterId] ?? {
+      events: [],
+      generatedText: "",
+      status: "idle" as const,
+      error: null,
+    }
+  );
+  const setChapter = useGenerationStore((s) => s.setChapter);
+  const resetChapter = useGenerationStore((s) => s.resetChapter);
   const abortRef = useRef<AbortController | null>(null);
+  const lastReqRef = useRef<GenerateRequest | null>(null);
 
   const start = useCallback(
     async (req: GenerateRequest) => {
-      setStatus("preparing");
+      lastReqRef.current = req;
+      setChapter(chapterId, {
+        status: "preparing",
+        events: [],
+        generatedText: "",
+        error: null,
+      });
       setGenerationStatus("preparing");
-      setEvents([]);
-      setGeneratedText("");
-      setError(null);
 
       const ac = new AbortController();
       abortRef.current = ac;
 
       try {
         for await (const ev of streamGeneration(chapterId, req, ac.signal)) {
-          setEvents((prev) => [...prev, ev]);
+          setChapter(chapterId, (prev) => {
+            const patch: Partial<typeof prev> = {
+              events: [...prev.events, ev],
+            };
+            if (ev.type === "token") {
+              patch.generatedText = prev.generatedText + ev.text;
+              patch.status = "streaming";
+            } else if (ev.type === "done") {
+              patch.status = "done";
+            } else if (ev.type === "error") {
+              patch.status = "error";
+              patch.error = `${ev.message} (${ev.code})`;
+            }
+            return patch;
+          });
           if (ev.type === "token") {
-            setGeneratedText((prev) => prev + ev.text);
-            setStatus("streaming");
             setGenerationStatus("streaming");
           } else if (ev.type === "done") {
-            setStatus("done");
             setGenerationStatus("done");
             qc.invalidateQueries({ queryKey: ["chapter", chapterId] });
             qc.invalidateQueries({ queryKey: ["generation-logs", "chapter", chapterId] });
             qc.invalidateQueries({ queryKey: ["generation-logs", "project"] });
           } else if (ev.type === "error") {
-            setStatus("error");
             setGenerationStatus("error");
-            setError(`${ev.message} (${ev.code})`);
           }
         }
       } catch (e) {
         if (e instanceof ApiError) {
-          setStatus("error");
+          // Capture full error info in shared state; caller can read state.error
+          setChapter(chapterId, { status: "error", error: formatApiError(e) });
           setGenerationStatus("error");
-          setError(`HTTP ${e.status}`);
-          throw e;
         }
         // aborted — silent
       }
     },
-    [chapterId, qc, setGenerationStatus]
+    [chapterId, qc, setGenerationStatus, setChapter]
   );
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
-    setStatus("idle");
+    setChapter(chapterId, { status: "idle" });
     setGenerationStatus("idle");
-  }, [setGenerationStatus]);
+  }, [chapterId, setChapter, setGenerationStatus]);
 
   const reset = useCallback(() => {
-    setEvents([]);
-    setGeneratedText("");
-    setStatus("idle");
-    setError(null);
+    resetChapter(chapterId);
     setGenerationStatus("idle");
-  }, [setGenerationStatus]);
+  }, [chapterId, resetChapter, setGenerationStatus]);
 
-  return { events, generatedText, status, error, start, cancel, reset };
+  const retry = useCallback(() => {
+    if (lastReqRef.current) {
+      void start(lastReqRef.current);
+    }
+  }, [start]);
+
+  return { ...chapterState, start, cancel, reset, retry };
 }

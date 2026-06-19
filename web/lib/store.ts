@@ -79,3 +79,50 @@ export const useGenerateParams = create<GenerateParamsState>((set) => ({
     }),
   reset: () => set({ involvedCharacterIds: [], locationId: null }),
 }));
+
+// Per-chapter generation state, keyed by chapterId so multiple consumers
+// (GenerateForm, StreamView) with the same chapterId share state.
+export interface ChapterGenerationState {
+  events: import("./sse").GenerationEvent[];
+  generatedText: string;
+  status: GenerationStatus;
+  error: string | null;
+}
+
+interface GenerationStore {
+  chapters: Record<number, ChapterGenerationState>;
+  getChapter: (id: number) => ChapterGenerationState;
+  setChapter: (
+    id: number,
+    patch:
+      | Partial<ChapterGenerationState>
+      | ((prev: ChapterGenerationState) => Partial<ChapterGenerationState>)
+  ) => void;
+  resetChapter: (id: number) => void;
+}
+
+const DEFAULT_CHAPTER_STATE: ChapterGenerationState = {
+  events: [],
+  generatedText: "",
+  status: "idle",
+  error: null,
+};
+
+export const useGenerationStore = create<GenerationStore>((set, get) => ({
+  chapters: {},
+  getChapter: (id) => get().chapters[id] ?? DEFAULT_CHAPTER_STATE,
+  setChapter: (id, patch) =>
+    set((s) => {
+      const current = s.chapters[id] ?? DEFAULT_CHAPTER_STATE;
+      const resolved =
+        typeof patch === "function" ? patch(current) : patch;
+      return {
+        chapters: {
+          ...s.chapters,
+          [id]: { ...current, ...resolved },
+        },
+      };
+    }),
+  resetChapter: (id) =>
+    set((s) => ({ chapters: { ...s.chapters, [id]: DEFAULT_CHAPTER_STATE } })),
+}));
