@@ -4,20 +4,39 @@ AI 辅助小说写作工具（本地优先 Web 应用）。
 
 ## 启动
 
+### 后端（端口 8005）
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env  # 填入 ANTHROPIC_API_KEY
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8005
 ```
 
-访问 http://127.0.0.1:8000/docs 查看 OpenAPI 文档。
+访问 http://127.0.0.1:8005/docs 查看 OpenAPI 文档。
+
+### 前端（端口 3300）
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+访问 http://localhost:3300 使用前端编辑器。
 
 ## 测试
 
 ```bash
+# 后端
 pytest
+
+# 前端单元 + 组件
+cd web && npm test
+
+# 前端 E2E（需要后端在 8005 运行）
+cd web && npm run test:e2e
 ```
 
 ## API 一览
