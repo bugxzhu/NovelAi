@@ -11,9 +11,21 @@ Flow:
        rows for this chapter, INSERT new pending rows, UPDATE chapter.summary /
        content_hash / status='final'. Any failure rolls back the entire txn.
     7. Return ExtractionResult.
+
+Race contract:
+    extract_chapter is NOT safe to run concurrently with accept/reject operations
+    on the same chapter. There is no row locking; the DELETE of status='pending'
+    rows plus INSERT of new pending rows runs in a single transaction, but a
+    concurrent accept_pending_update / reject_pending_update (or another
+    extract_chapter) racing against this transaction has undefined results.
+    Callers MUST serialize extract_chapter against accept/reject for the same
+    chapter_id (e.g. via a per-chapter lock or a single-writer queue). The DB
+    transaction only guarantees atomicity on its own writes, not isolation from
+    external concurrent mutations.
 """
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -32,6 +44,8 @@ from app.memory.schema import (
     PendingUpdate,
     Project,
 )
+
+logger = logging.getLogger(__name__)
 
 # Tolerance constants — invalid values are coerced/skipped rather than raising.
 ALLOWED_ROLES = {"protagonist", "supporting", "antagonist", "extra"}
@@ -79,10 +93,24 @@ def _build_pending_rows(
     # new_characters
     for c in entities.get("new_characters", []) or []:
         name = (c.get("name") or "").strip()
-        if not name or name in char_by_name:
+        if not name:
+            logger.info(
+                "extractor: skipping new_character with empty name "
+                "(chapter_id=%s); entry=%r", chapter_id, c,
+            )
+            continue
+        if name in char_by_name:
+            logger.info(
+                "extractor: skipping new_character '%s' — duplicate of existing "
+                "(chapter_id=%s)", name, chapter_id,
+            )
             continue
         role = c.get("role", "extra")
         if role not in ALLOWED_ROLES:
+            logger.info(
+                "extractor: coercing new_character '%s' role %r -> 'extra' "
+                "(chapter_id=%s)", name, role, chapter_id,
+            )
             role = "extra"
         description = (c.get("description") or "").strip()
         rows.append(PendingUpdate(
@@ -90,7 +118,7 @@ def _build_pending_rows(
             update_type="hard_fact", operation="create",
             target_table="characters", target_id=None,
             proposed_change={"name": name, "role": role, "description": description},
-            reason=c.get("reason", ""),
+            reason=(c.get("reason") or ""),
             extractor_model=model_name,
             status="pending",
         ))
@@ -99,12 +127,24 @@ def _build_pending_rows(
     for c in entities.get("updated_characters", []) or []:
         name = (c.get("name") or "").strip()
         if not name or name not in char_by_name:
+            logger.info(
+                "extractor: skipping updated_character — name %r not in existing "
+                "(chapter_id=%s); entry=%r", name, chapter_id, c,
+            )
             continue
         field = c.get("field", "")
         if field not in ALLOWED_CHARACTER_FIELDS:
+            logger.info(
+                "extractor: skipping updated_character '%s' — unknown field %r "
+                "(chapter_id=%s)", name, field, chapter_id,
+            )
             continue
         new_value = (c.get("new_value") or "").strip()
         if not new_value:
+            logger.info(
+                "extractor: skipping updated_character '%s' — empty new_value "
+                "(chapter_id=%s)", name, chapter_id,
+            )
             continue
         existing = char_by_name[name]
         old_value = str(getattr(existing, field, "") or "")
@@ -116,7 +156,7 @@ def _build_pending_rows(
                 "name": name, "field": field,
                 "old_value": old_value, "new_value": new_value,
             },
-            reason=c.get("reason", ""),
+            reason=(c.get("reason") or ""),
             extractor_model=model_name,
             status="pending",
         ))
@@ -124,10 +164,24 @@ def _build_pending_rows(
     # new_lore
     for l in entities.get("new_lore", []) or []:
         name = (l.get("name") or "").strip()
-        if not name or name in lore_by_name:
+        if not name:
+            logger.info(
+                "extractor: skipping new_lore with empty name "
+                "(chapter_id=%s); entry=%r", chapter_id, l,
+            )
+            continue
+        if name in lore_by_name:
+            logger.info(
+                "extractor: skipping new_lore '%s' — duplicate of existing "
+                "(chapter_id=%s)", name, chapter_id,
+            )
             continue
         ltype = l.get("type", "")
         if ltype not in ALLOWED_LORE_TYPES:
+            logger.info(
+                "extractor: skipping new_lore '%s' — unknown type %r "
+                "(chapter_id=%s)", name, ltype, chapter_id,
+            )
             continue
         description = (l.get("description") or "").strip()
         rows.append(PendingUpdate(
@@ -135,7 +189,7 @@ def _build_pending_rows(
             update_type="hard_fact", operation="create",
             target_table="lore_entries", target_id=None,
             proposed_change={"type": ltype, "name": name, "description": description},
-            reason=l.get("reason", ""),
+            reason=(l.get("reason") or ""),
             extractor_model=model_name,
             status="pending",
         ))
@@ -144,12 +198,24 @@ def _build_pending_rows(
     for l in entities.get("updated_lore", []) or []:
         name = (l.get("name") or "").strip()
         if not name or name not in lore_by_name:
+            logger.info(
+                "extractor: skipping updated_lore — name %r not in existing "
+                "(chapter_id=%s); entry=%r", name, chapter_id, l,
+            )
             continue
         field = l.get("field", "description")
         if field != "description":
+            logger.info(
+                "extractor: skipping updated_lore '%s' — field %r != 'description' "
+                "(chapter_id=%s)", name, field, chapter_id,
+            )
             continue  # M3a only updates description
         new_value = (l.get("new_value") or "").strip()
         if not new_value:
+            logger.info(
+                "extractor: skipping updated_lore '%s' — empty new_value "
+                "(chapter_id=%s)", name, chapter_id,
+            )
             continue
         existing = lore_by_name[name]
         old_value = str(existing.description or "")
@@ -161,7 +227,7 @@ def _build_pending_rows(
                 "name": name, "field": "description",
                 "old_value": old_value, "new_value": new_value,
             },
-            reason=l.get("reason", ""),
+            reason=(l.get("reason") or ""),
             extractor_model=model_name,
             status="pending",
         ))
@@ -212,6 +278,14 @@ def extract_chapter(
 
     _, model_name = router.resolve_model("extractor")
     response = router.complete(request)
+
+    # Pre-check: if the LLM hit max_tokens, output is likely truncated and
+    # json.loads will fail with a confusing error. Fail fast instead.
+    if response.stop_reason == "max_tokens":
+        raise ExtractionError(
+            f"LLM hit max_tokens; output likely truncated. "
+            f"response={response.text[:500]}"
+        )
 
     # Parse JSON
     try:
