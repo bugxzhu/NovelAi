@@ -176,9 +176,12 @@ class PendingUpdate(Base):
     proposed_change: Mapped[dict] = mapped_column(JSON, default=dict)
     reason: Mapped[str] = mapped_column(Text, default="")
 
+    # auto=True: proposed by Extractor Agent; auto=False: user-suggested in review UI (M3c+)
     auto: Mapped[bool] = mapped_column(default=True)
     extractor_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    extractor_log_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    extractor_log_id: Mapped[int | None] = mapped_column(
+        ForeignKey("generation_logs.id", ondelete="SET NULL"), nullable=True
+    )
 
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
 
