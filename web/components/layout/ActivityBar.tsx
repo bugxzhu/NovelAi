@@ -15,8 +15,21 @@ export function ActivityBar({ projectId }: { projectId: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const base = `/projects/${projectId}`;
+  const isHome = pathname === "/";
   return (
     <aside className="w-10 bg-sidebar flex flex-col items-center py-2 gap-1 shrink-0">
+      <button
+        onClick={() => router.push("/")}
+        title="返回项目列表"
+        className={`w-8 h-8 flex flex-col items-center justify-center rounded ${
+          isHome
+            ? "bg-accent-strong text-white"
+            : "hover:bg-hover-strong text-text-muted"
+        }`}
+      >
+        <span className="text-base leading-none">🏠</span>
+      </button>
+      <div className="w-6 h-px bg-line my-1" />
       {ITEMS.map((it) => {
         const isActive = pathname.startsWith(`${base}/${it.path}`);
         return (
