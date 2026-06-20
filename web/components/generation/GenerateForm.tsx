@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useCharacters, useLore } from "@/lib/queries";
-import { useGenerateParams } from "@/lib/store";
+import { useGenerateParams, useBeatDraftStore } from "@/lib/store";
 import { useGenerate } from "./useGenerate";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -17,8 +17,12 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
   const locations = (lore ?? []).filter((l) => l.type === "location");
 
   const { involvedCharacterIds, locationId, setParams } = useGenerateParams();
-  const [beatText, setBeatText] = useState("");
-  const [instruction, setInstruction] = useState("");
+  // Beat + instruction drafts persist across tab switches via the per-chapter store;
+  // cleared on Accept (see StreamView.handleAccept).
+  const beatText = useBeatDraftStore((s) => s.chapters[chapterId]?.beatText ?? "");
+  const instruction = useBeatDraftStore((s) => s.chapters[chapterId]?.instruction ?? "");
+  const setBeatText = useBeatDraftStore((s) => s.setBeatText);
+  const setInstruction = useBeatDraftStore((s) => s.setInstruction);
   const [modelTask, setModelTask] = useState<ModelTask>("writer_long");
 
   const { start, cancel, status } = useGenerate(chapterId);
@@ -53,7 +57,7 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
         <label className="text-xs text-text-muted-bright block mb-1">Beat 文本 *</label>
         <textarea
           value={beatText}
-          onChange={(e) => setBeatText(e.target.value)}
+          onChange={(e) => setBeatText(chapterId, e.target.value)}
           placeholder="例：李雷推开残月酒馆的门，看见多年未见的韩梅在角落等候"
           rows={3}
           maxLength={2000}
@@ -99,7 +103,7 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
         <label className="text-xs text-text-muted-bright block mb-1">附加指令</label>
         <textarea
           value={instruction}
-          onChange={(e) => setInstruction(e.target.value)}
+          onChange={(e) => setInstruction(chapterId, e.target.value)}
           placeholder="例：氛围压抑，对话简短"
           rows={2}
           maxLength={500}

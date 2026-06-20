@@ -138,3 +138,45 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
   resetChapter: (id) =>
     set((s) => ({ chapters: { ...s.chapters, [id]: DEFAULT_CHAPTER_STATE } })),
 }));
+
+// Per-chapter beat/instruction draft. Survives route changes (component
+// unmount/remount when switching tabs) within a session; cleared on Accept so
+// the user starts fresh for the next generation. Not persisted to localStorage
+// (refresh clears it — acceptable for a drafting UX).
+export interface ChapterBeatDraft {
+  beatText: string;
+  instruction: string;
+}
+
+interface BeatDraftStore {
+  chapters: Record<number, ChapterBeatDraft>;
+  getDraft: (id: number) => ChapterBeatDraft;
+  setBeatText: (id: number, text: string) => void;
+  setInstruction: (id: number, text: string) => void;
+  clear: (id: number) => void;
+}
+
+const DEFAULT_BEAT_DRAFT: ChapterBeatDraft = { beatText: "", instruction: "" };
+
+export const useBeatDraftStore = create<BeatDraftStore>((set, get) => ({
+  chapters: {},
+  getDraft: (id) => get().chapters[id] ?? DEFAULT_BEAT_DRAFT,
+  setBeatText: (id, text) =>
+    set((s) => ({
+      chapters: {
+        ...s.chapters,
+        [id]: { ...(s.chapters[id] ?? DEFAULT_BEAT_DRAFT), beatText: text },
+      },
+    })),
+  setInstruction: (id, text) =>
+    set((s) => ({
+      chapters: {
+        ...s.chapters,
+        [id]: { ...(s.chapters[id] ?? DEFAULT_BEAT_DRAFT), instruction: text },
+      },
+    })),
+  clear: (id) =>
+    set((s) => ({
+      chapters: { ...s.chapters, [id]: { ...DEFAULT_BEAT_DRAFT } },
+    })),
+}));

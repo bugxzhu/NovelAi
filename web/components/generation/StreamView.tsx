@@ -1,12 +1,14 @@
 "use client";
 
 import { useGenerate } from "./useGenerate";
+import { useBeatDraftStore } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { Editor } from "@tiptap/react";
 
 export function StreamView({ chapterId }: { chapterId: number }) {
   const { events, generatedText, status, reset, retry, error } = useGenerate(chapterId);
+  const clearBeatDraft = useBeatDraftStore((s) => s.clear);
   const toast = useToast();
 
   const meta = events.find((e) => e.type === "meta");
@@ -25,6 +27,8 @@ export function StreamView({ chapterId }: { chapterId: number }) {
     // reads the freshest markdown from the editor itself, so we don't need to compute it here.
     editor.commands.blur();
     reset();
+    // Clear beat + instruction drafts so the user starts fresh for the next generation.
+    clearBeatDraft(chapterId);
   };
 
   if (events.length === 0) {
