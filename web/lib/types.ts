@@ -274,7 +274,7 @@ export interface PendingUpdateRead {
   chapter_id: number;
   update_type: string;
   operation: "create" | "update";
-  target_table: "characters" | "lore_entries";
+  target_table: "characters" | "lore_entries" | "character_states";
   target_id: number | null;
   reason: string;
   status: "pending" | "accepted" | "rejected";
@@ -305,3 +305,19 @@ export interface FinalizeResponse {
 }
 
 export type PendingStatus = "pending" | "accepted" | "rejected" | "all";
+
+// === M3c-B: Character States ===
+
+export interface CharacterState {
+  id: number;
+  character_id: number;
+  chapter_id: number;
+  chapter_title: string;
+  chapter_order: number;
+  state_snapshot: string;
+  change_summary: string;
+  extractor_log_id: number | null;
+  pending_update_id: number | null;
+  created_at: string;
+  updated_at: string;
+}

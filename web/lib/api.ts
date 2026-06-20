@@ -7,6 +7,7 @@ import type {
   GenerationLogRead, GenerationLogDetail,
   PendingUpdateRead, PendingUpdateDetail,
   FinalizeResponse, PendingStatus,
+  CharacterState,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -125,4 +126,16 @@ export const api = {
     }),
   finalizeChapter: (chapterId: number) =>
     http<FinalizeResponse>(`/api/chapters/${chapterId}/finalize`, { method: "POST" }),
+
+  // M3c-B: Character States
+  listCharacterStates: (
+    characterId: number,
+    opts?: { order?: "desc" | "asc"; limit?: number },
+  ) =>
+    http<CharacterState[]>(
+      `/api/characters/${characterId}/states${qs({
+        order: opts?.order ?? "desc",
+        limit: opts?.limit ?? 20,
+      } as Record<string, unknown>)}`,
+    ),
 };
