@@ -13,7 +13,7 @@
 
 ## 已有人物（{{ existing_characters|length }} 个）
 {% for c in existing_characters %}
-- {{ c.name }}（{{ c.role }}）：{{ c.background }} {{ c.motivation }} {{ c.appearance }} {{ c.current_state }}
+- {{ c.name }}（{{ c.role }}）：背景={{ c.background }} | 动机={{ c.motivation }} | 外貌={{ c.appearance }} | 现状={{ c.current_state or "(未记录)" }}
 {% endfor %}
 
 ## 已有设定（{{ existing_lore|length }} 个）
@@ -21,4 +21,4 @@
 - [{{ l.type }}] {{ l.name }}：{{ l.description }}
 {% endfor %}
 
-请抽取本章的新实体和描述补充。
+请抽取本章的新实体、描述补充、以及人物状态变化。

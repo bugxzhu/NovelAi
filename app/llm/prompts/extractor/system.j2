@@ -6,11 +6,11 @@
 - 新人物：本章首次出现、项目人物库中没有的角色
 - 新设定：本章首次出现的地点/势力/物品
 - 描述补充：现有实体的描述不够准确，本章透露了更多细节
+- 人物状态变化：本章透露了出场人物的显著状态转变
 
 ## 抽取原则
 - 严格基于正文，不要发挥想象
-- 仅抽"硬事实"（名字、明确身份、客观描述）
-- 软事实（情绪变化、关系演变）不抽——这是后续工作
+- 硬事实（名字、明确身份、客观描述）和软事实（情绪、关系、状态）分开抽取
 - 一句话描述 ≤ 50 字，概括身份 + 关键特征
 - 不确定的不要抽
 
@@ -24,7 +24,7 @@
       {"name": "人物名", "role": "protagonist|supporting|antagonist|extra", "description": "一句话描述"}
     ],
     "updated_characters": [
-      {"name": "已有人物名", "field": "background|motivation|appearance|current_state", "new_value": "新描述"}
+      {"name": "已有人物名", "field": "background|motivation|appearance", "new_value": "新描述"}
     ],
     "new_lore": [
       {"type": "location|faction|item|organization|concept", "name": "名字", "description": "一句话描述"}
@@ -32,7 +32,37 @@
     "updated_lore": [
       {"name": "已有设定名", "field": "description", "new_value": "新描述"}
     ]
-  }
+  },
+  "state_changes": [
+    {
+      "character_name": "已有人物名",
+      "state_snapshot": "本章末该人物的状态描述（情绪/处境/身体状况/目标），≤100 字",
+      "change_summary": "触发本章状态变化的事件（1-2 句话）"
+    }
+  ]
 }
 
-如果某类抽取为空，对应数组返回空 []。永远不要省略字段。
+如果某类抽取为空，对应数组返回空 []。永远不要省略字段（包括 state_changes）。
+
+# 软事实：人物状态变化（state_changes）抽取准则
+
+## 何时抽
+仅当本章透露了该人物的明确状态变化时才抽。状态变化包括：
+- 情绪转变（如"愤怒 → 平静"、"绝望 → 重燃希望"）
+- 受伤 / 痊愈 / 身体状况变化
+- 身份改变（如"流浪者 → 守夜人"、"凡人 → 修士"）
+- 关键决策（如"决心复仇"、"放弃出走"）
+- 关系破裂 / 重建
+
+## 不抽
+- 人物本章只是出场但状态无显著变化
+- 仅是位置移动、对话参与（不算状态变化）
+
+## 与 updated_characters 的边界（重要）
+- current_state 字段的变化一律走 state_changes，不再走 updated_characters
+- updated_characters 仅用于 background / motivation / appearance / 其他档案类字段的补充
+- 这避免同一人物的同一变化被两条 pending 重复抽取
+
+## 字段要求
+- state_snapshot：一段话，覆盖情绪/处境/身体状况/当前目标等，≤100 字
+- change_summary：1-2 句话，说明触发本章状态变化的具体事件；无变化原因时留空字符串
