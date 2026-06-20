@@ -45,6 +45,24 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("OPENAI_MODEL", "NOVELAI_OPENAI_MODEL"),
     )
 
+    # M3b: Embedding + retrieval
+    embedding_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias=AliasChoices("EMBEDDING_MODEL", "NOVELAI_EMBEDDING_MODEL"),
+    )
+    embedding_dimensions: int = Field(
+        default=1536,
+        validation_alias=AliasChoices("EMBEDDING_DIMENSIONS", "NOVELAI_EMBEDDING_DIMENSIONS"),
+    )
+    retrieval_top_k: int = Field(
+        default=5,
+        validation_alias=AliasChoices("RETRIEVAL_TOP_K", "NOVELAI_RETRIEVAL_TOP_K"),
+    )
+    retrieval_threshold: float = Field(
+        default=0.4,
+        validation_alias=AliasChoices("RETRIEVAL_THRESHOLD", "NOVELAI_RETRIEVAL_THRESHOLD"),
+    )
+
     @property
     def db_url(self) -> str:
         return f"sqlite:///{self.db_path}"

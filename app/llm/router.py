@@ -80,6 +80,15 @@ class ModelRouter:
         provider = self._get_provider(provider_name)
         yield from provider.stream(request, model)
 
+    def embed(self, texts: list[str], model: str | None = None) -> list[list[float]]:
+        """Embed texts using the configured provider.
+
+        M3b: reuses the writer provider (user-configured OpenAI-compatible endpoint).
+        """
+        provider = self._get_provider(self.default_provider)
+        embed_model = model or settings.embedding_model or "text-embedding-3-small"
+        return provider.embed(texts, embed_model)
+
 
 # 进程级单例：复用底层 httpx 连接池，避免每请求新建 Anthropic / OpenAI 客户端
 default_router = ModelRouter()
