@@ -217,3 +217,34 @@ class ChunkMeta(Base):
         UniqueConstraint("chapter_id", "chunk_index", name="uq_chunk_chapter_index"),
         Index("idx_chunk_chapter", "chapter_id"),
     )
+
+
+class CharacterState(Base):
+    """Temporal log of a character's state at the end of each chapter where
+    they experienced a significant change. M3c-B: append-only, diff-style
+    (rows only created when Extractor detects a notable change). The latest
+    snapshot for a character is mirrored to characters.current_state."""
+    __tablename__ = "character_states"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+    )
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
+
+    state_snapshot: Mapped[str] = mapped_column(Text, nullable=False)
+    change_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+    # Audit fields (nullable; future manual creation paths may leave these null)
+    extractor_log_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pending_update_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+    __table_args__ = (
+        Index("idx_char_state_char_chapter", "character_id", "chapter_id"),
+        Index("idx_char_state_chapter", "chapter_id"),
+    )
