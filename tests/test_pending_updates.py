@@ -324,3 +324,184 @@ def test_reject_character_state_no_db_change(client, fake_router):
     with sm.SessionLocal() as s:
         rows = list(s.query(CharacterState).filter(CharacterState.character_id == cid))
     assert rows == []
+
+
+def test_accept_relationship_inserts_and_soft_closes_old(client, fake_router):
+    """Accept a relationships pending → soft-close old + INSERT new."""
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [
+                {"from_character_name": "李雷", "to_character_name": "韩梅",
+                 "type": "仇人", "strength": -0.8,
+                 "description": "决心复仇", "change_summary": "被伏击"}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    c1 = client.post("/api/characters", json={"project_id": pid, "name": "李雷"}).json()["id"]
+    c2 = client.post("/api/characters", json={"project_id": pid, "name": "韩梅"}).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+
+    # Pre-create an initial current-valid relationship via direct API (Task 6 will add this endpoint)
+    # For now, use the ORM directly since /api/relationships doesn't exist yet
+    from app.memory import session as sm
+    from app.memory.schema import Relationship
+    with sm.SessionLocal() as s:
+        s.add(Relationship(
+            project_id=pid, from_char_id=c1, to_char_id=c2,
+            type="旧友", strength=0.5, valid_from_chapter=0,
+        ))
+        s.commit()
+
+    client.post(f"/api/chapters/{ch}/finalize")
+
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    rel_pending = next(p for p in pendings if p["target_table"] == "relationships")
+    assert rel_pending["update_type"] == "soft_fact"
+    assert rel_pending["entity_name"] == "李雷 → 韩梅"
+    assert "仇人" in rel_pending["proposed_value"]
+
+    r = client.post(f"/api/pending-updates/{rel_pending['id']}/accept")
+    assert r.status_code == 200
+    assert r.json()["status"] == "accepted"
+
+    # After accept: 2 rows for this direction; 1 current-valid (仇人), 1 soft-closed (旧友)
+    with sm.SessionLocal() as s:
+        rows = list(s.query(Relationship).filter(
+            Relationship.from_char_id == c1,
+            Relationship.to_char_id == c2,
+        ).order_by(Relationship.id))
+    assert len(rows) == 2
+    # Old version soft-closed
+    assert rows[0].type == "旧友"
+    assert rows[0].valid_to_chapter == ch
+    # New version current
+    assert rows[1].type == "仇人"
+    assert rows[1].valid_to_chapter is None
+    assert rows[1].valid_from_chapter == ch
+    assert rows[1].pending_update_id == rel_pending["id"]
+
+    # Partial unique still holds: only 1 current-valid for this direction
+    current = [r for r in rows if r.valid_to_chapter is None]
+    assert len(current) == 1
+
+
+def test_accept_relationship_partial_unique_holds(client, fake_router):
+    """After accept, the partial unique index prevents any second current-valid row."""
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [
+                {"from_character_name": "李雷", "to_character_name": "韩梅",
+                 "type": "仇人", "strength": -0.8}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    c1 = client.post("/api/characters", json={"project_id": pid, "name": "李雷"}).json()["id"]
+    c2 = client.post("/api/characters", json={"project_id": pid, "name": "韩梅"}).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    rel_p = next(p for p in pendings if p["target_table"] == "relationships")
+    client.post(f"/api/pending-updates/{rel_p['id']}/accept")
+
+    # Try to INSERT a second current-valid directly via ORM → should IntegrityError
+    from app.memory import session as sm
+    from app.memory.schema import Relationship
+    from sqlalchemy.exc import IntegrityError
+    import pytest
+    with sm.SessionLocal() as s:
+        s.add(Relationship(
+            project_id=pid, from_char_id=c1, to_char_id=c2,
+            type="敌人", strength=-0.5, valid_from_chapter=ch,
+        ))
+        with pytest.raises(IntegrityError):
+            s.commit()
+
+
+def test_accept_relationship_target_gone_returns_500(client, fake_router):
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [
+                {"from_character_name": "李雷", "to_character_name": "韩梅",
+                 "type": "仇人", "strength": -0.8}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    c1 = client.post("/api/characters", json={"project_id": pid, "name": "李雷"}).json()["id"]
+    c2 = client.post("/api/characters", json={"project_id": pid, "name": "韩梅"}).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    rel_p = next(p for p in pendings if p["target_table"] == "relationships")
+
+    # Delete one endpoint (cascades will remove pending too since pending has FK to chapter,
+    # but the pending row remains because its target_id is null and target_table is relationships)
+    client.delete(f"/api/characters/{c2}")
+
+    r = client.post(f"/api/pending-updates/{rel_p['id']}/accept")
+    assert r.status_code == 500
+
+
+def test_reject_relationship_no_db_change(client, fake_router):
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [
+                {"from_character_name": "李雷", "to_character_name": "韩梅",
+                 "type": "仇人", "strength": -0.8}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "李雷"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "韩梅"}).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    rel_p = next(p for p in pendings if p["target_table"] == "relationships")
+
+    r = client.post(f"/api/pending-updates/{rel_p['id']}/reject", json={"note": "no"})
+    assert r.status_code == 200
+
+    from app.memory import session as sm
+    from app.memory.schema import Relationship
+    with sm.SessionLocal() as s:
+        rows = list(s.query(Relationship))
+    assert rows == []

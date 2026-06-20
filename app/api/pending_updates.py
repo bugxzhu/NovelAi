@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -11,6 +11,7 @@ from app.memory.schema import (
     CharacterState,
     LoreEntry,
     PendingUpdate,
+    Relationship,
 )
 from app.models.pending import (
     AcceptRejectResponse,
@@ -44,6 +45,20 @@ def _derive_summary_fields(proposed_change: dict, target_table: str) -> dict:
         field_name = "state_snapshot"
         old_value = ""
         proposed_value = proposed_change.get("state_snapshot", "")
+    elif target_table == "relationships":
+        from_name = proposed_change.get("from_character_name", "")
+        to_name = proposed_change.get("to_character_name", "")
+        entity_type = ""
+        entity_name = f"{from_name} → {to_name}" if from_name and to_name else ""
+        field_name = ""
+        old_value = ""
+        rtype = proposed_change.get("type", "")
+        strength = proposed_change.get("strength", 0.0)
+        desc = proposed_change.get("description", "")
+        proposed_value = (
+            f"{rtype}（强度 {strength}）：{desc}" if desc
+            else f"{rtype}（强度 {strength}）"
+        )
     else:
         entity_type = ""
         entity_name = ""
@@ -191,6 +206,49 @@ def accept_pending(pending_id: int, db: Session = Depends(get_db)):
                 db.flush()  # get state.id for audit
                 # Mirror strategy B: characters.current_state = latest snapshot
                 char.current_state = data.get("state_snapshot", "")
+            elif p.target_table == "relationships":
+                # M3c-A: version-switch semantics
+                data = p.proposed_change or {}
+                from_id = data.get("from_character_id")
+                to_id = data.get("to_character_id")
+                if from_id is None or to_id is None:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="relationships pending missing from/to",
+                    )
+                # Validate both endpoints still exist
+                if db.get(Character, from_id) is None or db.get(Character, to_id) is None:
+                    raise HTTPException(
+                        status_code=500, detail="target character gone")
+
+                new_from_chapter = data.get("valid_from_chapter", p.chapter_id)
+
+                # ① Soft-close existing current-valid (same direction)
+                db.execute(
+                    update(Relationship)
+                    .where(
+                        Relationship.from_char_id == from_id,
+                        Relationship.to_char_id == to_id,
+                        Relationship.valid_to_chapter.is_(None),
+                    )
+                    .values(valid_to_chapter=new_from_chapter,
+                            updated_at=datetime.now(UTC))
+                )
+
+                # ② INSERT new version
+                rel = Relationship(
+                    project_id=p.project_id,
+                    from_char_id=from_id, to_char_id=to_id,
+                    type=data.get("type", ""),
+                    strength=data.get("strength", 0.0),
+                    description=data.get("description", ""),
+                    valid_from_chapter=new_from_chapter,
+                    valid_to_chapter=None,
+                    change_summary=data.get("change_summary", ""),
+                    extractor_log_id=p.extractor_log_id,
+                    pending_update_id=p.id,
+                )
+                db.add(rel)
             else:
                 raise HTTPException(status_code=500, detail=f"unknown target_table: {p.target_table}")
         elif p.operation == "update":
