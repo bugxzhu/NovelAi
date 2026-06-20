@@ -83,3 +83,12 @@ class OpenAIProvider:
                 error_message=str(e),
                 error_code=type(e).__name__,
             )
+
+    def embed(self, texts: list[str], model: str) -> list[list[float]]:
+        """OpenAI-compatible embeddings endpoint.
+
+        Works with: OpenAI text-embedding-3-small/large, DashScope text-embedding-v2,
+        Ollama bge-m3, vLLM, LM Studio, etc.
+        """
+        resp = self._client.embeddings.create(model=model, input=texts)
+        return [d.embedding for d in resp.data]

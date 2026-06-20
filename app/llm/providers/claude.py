@@ -59,3 +59,10 @@ class ClaudeProvider:
                 error_message=str(e),
                 error_code=type(e).__name__,
             )
+
+    def embed(self, texts: list[str], model: str) -> list[list[float]]:
+        """Anthropic does not provide an embeddings API."""
+        raise NotImplementedError(
+            "Anthropic does not provide embeddings API. "
+            "Set NOVELAI_LLM_PROVIDER=openai or configure a separate embedding endpoint."
+        )
