@@ -37,9 +37,12 @@ def upgrade() -> None:
         batch_op.create_index('idx_chunk_chapter', ['chapter_id'], unique=False)
 
     # M3b: vec_chunks virtual table (sqlite-vec). SQLAlchemy can't autogenerate this.
+    # distance_metric=cosine is REQUIRED: sqlite-vec defaults to L2 (Euclidean),
+    # which would make the M3b retrieval threshold logic (cosine similarity)
+    # produce meaningless scores for non-normalized embeddings.
     op.execute(
         "CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0("
-        "embedding FLOAT[1024])"
+        "embedding FLOAT[1024] distance_metric=cosine)"
     )
     # ### end Alembic commands ###
 

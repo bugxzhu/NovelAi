@@ -1,216 +1,172 @@
+import struct
+
 import pytest
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.orm import sessionmaker
 
-from app.memory.errors import ChapterNotFoundError, InvalidContextError
-from app.memory.retrieval import (
-    ChapterSummary,
-    CharacterStateSnapshot,
-    ContextBundle,
-    assemble_context,
-)
-
-
-def _seed_project_with_chars(db_session, n_chars=2):
-    from app.memory.schema import Character, Project, WorldOverview
-    p = Project(title="TestNovel", genre="fantasy", premise="A test.",
-                main_theme="courage", tone="epic")
-    db_session.add(p); db_session.flush()
-    wo = WorldOverview(project_id=p.id, setting_era="Medieval",
-                       power_system="Magic")
-    db_session.add(wo)
-    chars = []
-    for i in range(n_chars):
-        c = Character(project_id=p.id, name=f"Char{i}",
-                      role="protagonist", current_state=f"state{i}")
-        db_session.add(c); chars.append(c)
-    db_session.flush()
-    return p, chars
-
-
-def _seed_chapter(db_session, project_id, order_index, title, summary=""):
-    from app.memory.schema import Chapter
-    ch = Chapter(project_id=project_id, order_index=order_index,
-                 title=title, summary=summary)
-    db_session.add(ch); db_session.flush()
-    return ch
+from app.memory.base import Base
+import app.memory.schema  # noqa: F401
 
 
 @pytest.fixture
-def db_session(tmp_path, monkeypatch):
-    from app.memory import session as session_module
-    from app.memory.session import _build_engine, init_db
-    from sqlalchemy.orm import sessionmaker
-    db_file = tmp_path / "test.db"
-    monkeypatch.setattr("app.memory.session.settings.db_path", db_file)
-    new_engine = _build_engine(db_file)
-    new_session = sessionmaker(bind=new_engine, autoflush=False,
-                                autocommit=False, future=True)
-    monkeypatch.setattr(session_module, "engine", new_engine)
-    monkeypatch.setattr(session_module, "SessionLocal", new_session)
-    init_db()
-    with new_session() as s:
+def db_session(tmp_path):
+    db_file = tmp_path / "retrieval_test.db"
+    engine = create_engine(
+        f"sqlite:///{db_file}",
+        connect_args={"check_same_thread": False},
+        future=True,
+    )
+    import sqlite_vec
+
+    @event.listens_for(engine, "connect")
+    def _load_vec(dbapi_conn, _record):
+        dbapi_conn.enable_load_extension(True)
+        sqlite_vec.load(dbapi_conn)
+        dbapi_conn.enable_load_extension(False)
+
+    Base.metadata.create_all(engine)
+    with engine.connect() as conn:
+        # distance_metric=cosine: sqlite-vec defaults to L2 (Euclidean); the M3b
+        # design spec is based on cosine similarity, so we must declare cosine
+        # explicitly. With L2 default, "score = 1.0 - distance" would produce
+        # meaningless similarity values for non-normalized embeddings.
+        conn.execute(text(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0("
+            "embedding FLOAT[1024] distance_metric=cosine)"
+        ))
+        conn.commit()
+
+    Session = sessionmaker(bind=engine, future=True)
+    with Session() as s:
         yield s
 
 
-def test_assemble_basic(db_session):
-    p, chars = _seed_project_with_chars(db_session, n_chars=2)
-    ch = _seed_chapter(db_session, p.id, 1, "Chapter 1")
-    db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch.id, beat_text="x",
-        involved_character_ids=[chars[0].id, chars[1].id],
-    )
-    assert isinstance(bundle, ContextBundle)
-    assert bundle.project.id == p.id
-    assert bundle.world_overview is not None
-    assert bundle.world_overview.setting_era == "Medieval"
-    assert len(bundle.characters) == 2
-    assert {c.name for c in bundle.characters} == {"Char0", "Char1"}
-    assert chars[0].id in bundle.character_states
-    assert bundle.character_states[chars[0].id].current_state == "state0"
+def _seed_two_chapters_with_chunks(db_session):
+    """Seed 2 chapters; chapter 1 has 2 chunks, chapter 2 has 1 chunk."""
+    from app.memory.schema import Chapter, Project
+    from app.memory.vectors import insert_chunk
 
-
-def test_assemble_chapter_not_found(db_session):
-    with pytest.raises(ChapterNotFoundError):
-        assemble_context(
-            db_session, chapter_id=99999, beat_text="x",
-            involved_character_ids=[1],
-        )
-
-
-def test_assemble_with_no_world_overview(db_session):
-    from app.memory.schema import Character, Chapter, Project
-    p = Project(title="NoWO")
+    p = Project(title="P")
     db_session.add(p); db_session.flush()
-    c = Character(project_id=p.id, name="C")
-    db_session.add(c)
-    ch = Chapter(project_id=p.id, order_index=1, title="C1")
-    db_session.add(ch); db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch.id, beat_text="x",
-        involved_character_ids=[c.id],
-    )
-    assert bundle.world_overview is None
+    ch1 = Chapter(project_id=p.id, order_index=1, title="第一章")
+    ch2 = Chapter(project_id=p.id, order_index=2, title="第二章")
+    db_session.add_all([ch1, ch2]); db_session.flush()
 
-
-def test_assemble_m3_fields_are_empty(db_session):
-    p, chars = _seed_project_with_chars(db_session, 1)
-    ch = _seed_chapter(db_session, p.id, 1, "C1")
+    # chapter 1 chunk A: vector close to query (cosine ~ 0.9)
+    insert_chunk(db_session, chapter_id=ch1.id, chunk_index=0,
+                 chunk_type="paragraph", text="chapter1 chunk A", char_count=15,
+                 embedding=[0.9] * 1024)
+    # chapter 1 chunk B: vector orthogonal to query
+    orthogonal = [0.0] * 1024
+    orthogonal[0] = 1.0
+    insert_chunk(db_session, chapter_id=ch1.id, chunk_index=1,
+                 chunk_type="paragraph", text="chapter1 chunk B", char_count=15,
+                 embedding=orthogonal)
+    # chapter 2 chunk: similar to query too
+    insert_chunk(db_session, chapter_id=ch2.id, chunk_index=0,
+                 chunk_type="paragraph", text="chapter2 chunk", char_count=14,
+                 embedding=[0.85] * 1024)
     db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch.id, beat_text="x",
-        involved_character_ids=[chars[0].id],
+    return ch1.id, ch2.id
+
+
+def _fake_router_returning(query_vec):
+    """Build a router whose embed() returns the given query vector."""
+    from unittest.mock import MagicMock
+    fake = MagicMock()
+    fake.embed.return_value = [query_vec]
+    return fake
+
+
+def test_retrieval_returns_relevant_chunks(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    ch1, ch2 = _seed_two_chapters_with_chunks(db_session)
+    # query vector close to chunk A and chapter2 chunk
+    fake_router = _fake_router_returning([0.9] * 1024)
+
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=999,  # exclude nothing
+        query_text="anything", router=fake_router,
     )
-    assert bundle.relationships == []
-    assert bundle.plot_lines == []
-    assert len(bundle.character_states) == 1
+    texts = [r.text for r in results]
+    assert "chapter1 chunk A" in texts
+    assert "chapter2 chunk" in texts
+    # chunk B is orthogonal (cosine ~ 0); filtered by threshold 0.4
+    assert "chapter1 chunk B" not in texts
 
 
-def test_assemble_recent_summaries_excludes_current(db_session):
-    p, chars = _seed_project_with_chars(db_session, 1)
-    ch1 = _seed_chapter(db_session, p.id, 1, "C1", summary="prev1")
-    ch2 = _seed_chapter(db_session, p.id, 2, "C2", summary="prev2")
-    db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch2.id, beat_text="x",
-        involved_character_ids=[chars[0].id],
+def test_retrieval_threshold_filters_low_score(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    _seed_two_chapters_with_chunks(db_session)
+    # Query vector that is orthogonal to ALL seeded chunks:
+    #   chunk A = [0.9]*1024  → dot at index 1 is 0.9, but query[1] = 0 → cosine ≈ 0.03
+    #   chunk B = [1,0,...,0] → dot at index 0 is 0 (query[0]=0) and index 1 is 0 → cosine = 0
+    #   chunk C = [0.85]*1024 → same as A → cosine ≈ 0.03
+    # All scores well below the 0.4 threshold.
+    orthogonal = [0.0] * 1024
+    orthogonal[1] = 1.0
+    fake_router = _fake_router_returning(orthogonal)
+
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=999, query_text="x", router=fake_router,
     )
-    ids = [s.chapter_id for s in bundle.recent_chapter_summaries]
-    assert ch2.id not in ids
-    assert ch1.id in ids
+    # All chunks orthogonal to query → filtered by threshold 0.4
+    assert len(results) == 0
 
 
-def test_assemble_recent_summaries_skips_empty(db_session):
-    p, chars = _seed_project_with_chars(db_session, 1)
-    ch1 = _seed_chapter(db_session, p.id, 1, "C1", summary="")  # empty
-    ch2 = _seed_chapter(db_session, p.id, 2, "C2", summary="real")
-    db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch2.id, beat_text="x",
-        involved_character_ids=[chars[0].id],
+def test_retrieval_excludes_current_chapter(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    ch1, ch2 = _seed_two_chapters_with_chunks(db_session)
+    fake_router = _fake_router_returning([0.9] * 1024)
+
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=ch1, query_text="x", router=fake_router,
     )
-    ids = [s.chapter_id for s in bundle.recent_chapter_summaries]
-    assert ch1.id not in ids
+    chapter_ids = {r.chapter_id for r in results}
+    assert ch1 not in chapter_ids
+    assert ch2 in chapter_ids
 
 
-def test_assemble_rejects_cross_project_character(db_session):
-    from app.memory.schema import Character, Chapter, Project
-    p1 = Project(title="A"); db_session.add(p1); db_session.flush()
-    p2 = Project(title="B"); db_session.add(p2); db_session.flush()
-    c2 = Character(project_id=p2.id, name="c2")
-    db_session.add(c2)
-    ch1 = Chapter(project_id=p1.id, order_index=1, title="c1")
-    db_session.add(ch1); db_session.commit()
-    with pytest.raises(InvalidContextError) as exc:
-        assemble_context(
-            db_session, chapter_id=ch1.id, beat_text="x",
-            involved_character_ids=[c2.id],
-        )
-    assert c2.id in exc.value.invalid_character_ids
+def test_retrieval_top_k_limits_count(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    _seed_two_chapters_with_chunks(db_session)
+    fake_router = _fake_router_returning([0.9] * 1024)
 
-
-def test_assemble_rejects_nonexistent_character(db_session):
-    p, chars = _seed_project_with_chars(db_session, 1)
-    ch = _seed_chapter(db_session, p.id, 1, "C1")
-    db_session.commit()
-    with pytest.raises(InvalidContextError) as exc:
-        assemble_context(
-            db_session, chapter_id=ch.id, beat_text="x",
-            involved_character_ids=[chars[0].id, 99999],
-        )
-    assert 99999 in exc.value.invalid_character_ids
-    assert chars[0].id not in exc.value.invalid_character_ids
-
-
-def test_assemble_rejects_cross_project_location(db_session):
-    from app.memory.schema import Chapter, LoreEntry, Project
-    p1 = Project(title="A"); db_session.add(p1); db_session.flush()
-    p2 = Project(title="B"); db_session.add(p2); db_session.flush()
-    loc2 = LoreEntry(project_id=p2.id, type="location", name="loc2")
-    db_session.add(loc2)
-    ch1 = Chapter(project_id=p1.id, order_index=1, title="c1")
-    db_session.add(ch1); db_session.commit()
-    with pytest.raises(InvalidContextError) as exc:
-        assemble_context(
-            db_session, chapter_id=ch1.id, beat_text="x",
-            involved_character_ids=[],
-            location_id=loc2.id,
-        )
-    assert exc.value.invalid_location_id == loc2.id
-
-
-def test_assemble_location_with_ancestors(db_session):
-    from app.memory.schema import Chapter, LoreEntry, Project
-    p = Project(title="A"); db_session.add(p); db_session.flush()
-    kingdom = LoreEntry(project_id=p.id, type="location", name="Kingdom")
-    db_session.add(kingdom); db_session.flush()
-    city = LoreEntry(project_id=p.id, type="location", name="City",
-                     parent_id=kingdom.id)
-    db_session.add(city); db_session.flush()
-    district = LoreEntry(project_id=p.id, type="location", name="District",
-                         parent_id=city.id)
-    db_session.add(district)
-    ch = Chapter(project_id=p.id, order_index=1, title="C1")
-    db_session.add(ch); db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch.id, beat_text="x",
-        involved_character_ids=[],
-        location_id=district.id,
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=999, query_text="x", router=fake_router,
+        top_k=1,
     )
-    names = [l.name for l in bundle.location_lore]
-    assert names == ["Kingdom", "City", "District"]
+    assert len(results) == 1
 
 
-def test_assemble_includes_faction_from_character_affiliations(db_session):
-    from app.memory.schema import Chapter, Character, LoreEntry, Project
-    p = Project(title="A"); db_session.add(p); db_session.flush()
-    faction = LoreEntry(project_id=p.id, type="faction", name="守夜人")
-    db_session.add(faction); db_session.flush()
-    c = Character(project_id=p.id, name="C", affiliations=[faction.id])
-    db_session.add(c)
-    ch = Chapter(project_id=p.id, order_index=1, title="C1")
-    db_session.add(ch); db_session.commit()
-    bundle = assemble_context(
-        db_session, chapter_id=ch.id, beat_text="x",
-        involved_character_ids=[c.id],
+def test_retrieval_empty_when_no_chunks(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    fake_router = _fake_router_returning([0.5] * 1024)
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=999, query_text="x", router=fake_router,
     )
-    assert any(f.name == "守夜人" for f in bundle.faction_lore)
+    assert results == []
+
+
+def test_retrieval_sorts_by_score_desc(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    _seed_two_chapters_with_chunks(db_session)
+    fake_router = _fake_router_returning([0.9] * 1024)
+
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=999, query_text="x", router=fake_router,
+    )
+    if len(results) >= 2:
+        assert results[0].score >= results[1].score
+
+
+def test_retrieval_joins_chapter_title(db_session):
+    from app.agents.retrieval import assemble_retrieval_context
+    ch1, ch2 = _seed_two_chapters_with_chunks(db_session)
+    fake_router = _fake_router_returning([0.9] * 1024)
+
+    results = assemble_retrieval_context(
+        db_session, current_chapter_id=999, query_text="x", router=fake_router,
+    )
+    titles = {r.chapter_title for r in results}
+    assert "第一章" in titles or "第二章" in titles

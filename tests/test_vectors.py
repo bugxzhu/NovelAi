@@ -33,11 +33,13 @@ def db_session(tmp_path):
         sqlite_vec.load(dbapi_conn)
         dbapi_conn.enable_load_extension(False)
 
-    # Create all ORM tables + vec_chunks virtual table
+    # Create all ORM tables + vec_chunks virtual table.
+    # distance_metric=cosine is required (sqlite-vec defaults to L2; see migration).
     Base.metadata.create_all(engine)
     with engine.connect() as conn:
         conn.execute(text(
-            "CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding FLOAT[1024])"
+            "CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0("
+            "embedding FLOAT[1024] distance_metric=cosine)"
         ))
         conn.commit()
 
