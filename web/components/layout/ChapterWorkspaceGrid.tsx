@@ -1,7 +1,10 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useRef } from "react";
 import { useUIStore } from "@/lib/store";
+
+const MIN_HEIGHT = 100;
+const MAX_HEIGHT_RATIO = 0.85; // max 85% of viewport
 
 export function ChapterWorkspaceGrid({
   sidePanel,
@@ -18,6 +21,47 @@ export function ChapterWorkspaceGrid({
   const contextPanelWidth = useUIStore((s) => s.contextPanelWidth);
   const bottomPanelOpen = useUIStore((s) => s.bottomPanelOpen);
   const bottomPanelHeight = useUIStore((s) => s.bottomPanelHeight);
+  const setBottomPanelHeight = useUIStore((s) => s.setBottomPanelHeight);
+
+  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!bottomPanelOpen) return;
+      e.preventDefault();
+      dragRef.current = { startY: e.clientY, startHeight: bottomPanelHeight };
+
+      const onMove = (ev: MouseEvent) => {
+        if (!dragRef.current) return;
+        const delta = dragRef.current.startY - ev.clientY;
+        const next = dragRef.current.startHeight + delta;
+        const maxH = window.innerHeight * MAX_HEIGHT_RATIO;
+        setBottomPanelHeight(Math.max(MIN_HEIGHT, Math.min(maxH, next)));
+      };
+
+      const onUp = () => {
+        dragRef.current = null;
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      document.body.style.cursor = "ns-resize";
+      document.body.style.userSelect = "none";
+    },
+    [bottomPanelOpen, bottomPanelHeight, setBottomPanelHeight]
+  );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -40,10 +84,20 @@ export function ChapterWorkspaceGrid({
           </aside>
         )}
       </div>
+
+      {/* Drag handle — only visible when bottom panel is open */}
+      {bottomPanel && bottomPanelOpen && (
+        <div
+          onMouseDown={onMouseDown}
+          className="shrink-0 h-1.5 bg-line hover:bg-accent cursor-ns-resize transition-colors"
+          title="上下拖动调整面板高度"
+        />
+      )}
+
       {bottomPanel && (
         <div
           style={{ height: bottomPanelOpen ? bottomPanelHeight : 28 }}
-          className="shrink-0 border-t border-line bg-panel overflow-hidden transition-[height] duration-150"
+          className="shrink-0 border-t border-line bg-panel overflow-hidden"
         >
           {bottomPanel}
         </div>
