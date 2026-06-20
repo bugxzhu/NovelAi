@@ -55,7 +55,8 @@ logger = logging.getLogger(__name__)
 
 # Tolerance constants — invalid values are coerced/skipped rather than raising.
 ALLOWED_ROLES = {"protagonist", "supporting", "antagonist", "extra"}
-ALLOWED_CHARACTER_FIELDS = {"background", "motivation", "appearance", "current_state"}
+ALLOWED_CHARACTER_FIELDS = {"background", "motivation", "appearance"}
+# M3c-B: current_state changes go through state_changes, not updated_characters
 ALLOWED_LORE_TYPES = {"location", "faction", "item", "organization", "concept"}
 # update field for lore_entries is always "description" in M3a
 
@@ -80,8 +81,9 @@ def _build_pending_rows(
     existing_characters: list[Character],
     existing_lore: list[LoreEntry],
     model_name: str,
+    state_changes: list[dict] | None = None,
 ) -> list[PendingUpdate]:
-    """Convert LLM entities dict to PendingUpdate rows.
+    """Convert LLM entities dict + state_changes to PendingUpdate rows.
 
     Tolerance rules:
         - new_characters / new_lore: empty/duplicate name → skip
@@ -91,6 +93,8 @@ def _build_pending_rows(
           empty new_value → skip
         - updated_lore: name not in existing → skip; field != "description" → skip;
           empty new_value → skip
+        - state_changes: character_name not in existing → skip; empty name/snapshot → skip;
+          missing change_summary → defaults to ""
     """
     rows: list[PendingUpdate] = []
     char_by_name = {c.name: c for c in existing_characters}
@@ -238,6 +242,43 @@ def _build_pending_rows(
             status="pending",
         ))
 
+    # M3c-B: state_changes → soft_fact pending (target_table='character_states')
+    # Append-only temporal log. character_name must resolve to an existing character;
+    # state changes for new (not-yet-created) characters are skipped — user should
+    # accept the new_character create first, then re-finalize to capture the state.
+    for sc in (state_changes or []):
+        name = (sc.get("character_name") or "").strip()
+        snapshot = (sc.get("state_snapshot") or "").strip()
+        if not name or not snapshot:
+            logger.info(
+                "extractor: skipping state_change — empty name/snapshot "
+                "(chapter_id=%s); entry=%r", chapter_id, sc,
+            )
+            continue
+        char = char_by_name.get(name)
+        if char is None:
+            logger.info(
+                "extractor: skipping state_change — character %r not in existing "
+                "(chapter_id=%s); accept the new_character first then re-finalize",
+                name, chapter_id,
+            )
+            continue
+        rows.append(PendingUpdate(
+            project_id=project_id, chapter_id=chapter_id,
+            update_type="soft_fact", operation="create",
+            target_table="character_states", target_id=None,
+            proposed_change={
+                "character_id": char.id,
+                "character_name": char.name,
+                "state_snapshot": snapshot,
+                "change_summary": (sc.get("change_summary") or "").strip(),
+            },
+            reason=(sc.get("reason") or ""),
+            auto=False,
+            extractor_model=model_name,
+            status="pending",
+        ))
+
     return rows
 
 
@@ -313,6 +354,7 @@ def extract_chapter(
         existing_characters=existing_characters,
         existing_lore=existing_lore,
         model_name=model_name,
+        state_changes=parsed.get("state_changes") or [],
     )
 
     new_hash = hashlib.sha256((chapter.content or "").encode()).hexdigest()
