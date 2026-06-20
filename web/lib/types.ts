@@ -274,7 +274,7 @@ export interface PendingUpdateRead {
   chapter_id: number;
   update_type: string;
   operation: "create" | "update";
-  target_table: "characters" | "lore_entries" | "character_states";
+  target_table: "characters" | "lore_entries" | "character_states" | "relationships";
   target_id: number | null;
   reason: string;
   status: "pending" | "accepted" | "rejected";
@@ -320,4 +320,53 @@ export interface CharacterState {
   pending_update_id: number | null;
   created_at: string;
   updated_at: string;
+}
+
+// === M3c-A: Relationships ===
+
+export interface Relationship {
+  id: number;
+  project_id: number;
+  from_char_id: number;
+  from_char_name: string;
+  to_char_id: number;
+  to_char_name: string;
+  type: string;
+  strength: number;
+  description: string;
+  valid_from_chapter: number;
+  valid_to_chapter: number | null;
+  change_summary: string;
+  extractor_log_id: number | null;
+  pending_update_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RelationshipCreate {
+  project_id: number;
+  from_char_id: number;
+  to_char_id: number;
+  type: string;
+  strength?: number;
+  description?: string;
+  valid_from_chapter?: number;
+  change_summary?: string;
+}
+
+export interface RelationshipUpdate {
+  type?: string;
+  strength?: number;
+  description?: string;
+}
+
+export interface RelationshipHistoryItem {
+  version_id: number;
+  valid_from_chapter: number;
+  valid_to_chapter: number | null;
+  type: string;
+  strength: number;
+  description: string;
+  change_summary: string;
+  created_at: string;
 }

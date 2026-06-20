@@ -8,6 +8,7 @@ import type {
   PendingUpdateRead, PendingUpdateDetail,
   FinalizeResponse, PendingStatus,
   CharacterState,
+  Relationship, RelationshipCreate, RelationshipUpdate, RelationshipHistoryItem,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -138,4 +139,29 @@ export const api = {
         limit: opts?.limit ?? 20,
       } as Record<string, unknown>)}`,
     ),
+
+  // M3c-A: Relationships
+  listRelationships: (projectId: number, opts?: { includeHistory?: boolean; limit?: number }) =>
+    http<Relationship[]>(
+      `/api/relationships${qs({
+        project_id: projectId,
+        include_history: opts?.includeHistory ? "true" : undefined,
+        limit: opts?.limit ?? 200,
+      } as Record<string, unknown>)}`,
+    ),
+  getRelationshipHistory: (fromCharId: number, toCharId: number) =>
+    http<RelationshipHistoryItem[]>(
+      `/api/relationships/history${qs({ from_char_id: fromCharId, to_char_id: toCharId })}`,
+    ),
+  createRelationship: (data: RelationshipCreate) =>
+    http<Relationship>("/api/relationships", { method: "POST", body: JSON.stringify(data) }),
+  updateRelationship: (id: number, data: RelationshipUpdate) =>
+    http<Relationship>(`/api/relationships/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteRelationship: (id: number) =>
+    http<void>(`/api/relationships/${id}`, { method: "DELETE" }),
+  softCloseRelationship: (id: number, validToChapter: number) =>
+    http<Relationship>(`/api/relationships/${id}/soft-close`, {
+      method: "POST",
+      body: JSON.stringify({ valid_to_chapter: validToChapter }),
+    }),
 };
