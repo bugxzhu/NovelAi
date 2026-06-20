@@ -14,6 +14,8 @@ from app.memory.schema import Chapter, PendingUpdate, Project
 @pytest.fixture
 def db_session(tmp_path, monkeypatch):
     """Isolated DB session for extractor tests."""
+    from sqlalchemy import text
+
     from app.memory import session as session_module
     from app.memory.session import _build_engine, init_db
     from sqlalchemy.orm import sessionmaker
@@ -25,6 +27,15 @@ def db_session(tmp_path, monkeypatch):
     monkeypatch.setattr(session_module, "engine", new_engine)
     monkeypatch.setattr(session_module, "SessionLocal", new_session)
     init_db()
+    # M3b: create vec_chunks virtual table. Base.metadata.create_all doesn't
+    # cover virtual tables; cosine metric matches the migration (Task 7 finding:
+    # sqlite-vec defaults to L2, so the metric must be declared explicitly).
+    with new_engine.connect() as conn:
+        conn.execute(text(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0("
+            "embedding FLOAT[1024] distance_metric=cosine)"
+        ))
+        conn.commit()
     with new_session() as s:
         yield s
 
@@ -40,7 +51,7 @@ def _seed_chapter(db_session, content="夜色压在屋脊上。李雷推开残�
 
 
 def _fake_router(response_text: str):
-    """Build a fake router that returns a fixed LLMResponse."""
+    """Build a fake router that returns a fixed LLMResponse + embeddings."""
     fake = MagicMock()
     fake.resolve_model = MagicMock(return_value=("claude", "claude-haiku-4-5"))
     fake.complete = MagicMock(
@@ -51,6 +62,9 @@ def _fake_router(response_text: str):
             stop_reason="end_turn",
         )
     )
+    # M3b: default embed returns 1 vector per call (1024-dim to match vec_chunks).
+    # Per-test overrides take precedence for multi-chunk cases.
+    fake.embed = MagicMock(return_value=[[0.1] * 1024])
     return fake
 
 
@@ -288,3 +302,138 @@ def test_extract_chapter_not_found(db_session):
     fake_router = _fake_router("{}")
     with pytest.raises(ChapterNotFoundError):
         extract_chapter(db_session, chapter_id=99999, router=fake_router)
+
+
+# ============================================================
+# M3b: chunking + embedding integration
+# ============================================================
+
+
+def test_extract_creates_chunks(db_session):
+    """After extract_chapter, chunk_meta should have rows for the chapter."""
+    from app.memory.schema import ChunkMeta
+
+    p, ch = _seed_chapter(db_session, content="第一段。\n\n第二段。\n\n第三段。")
+    fake_router = _fake_router(json.dumps({
+        "summary": "x",
+        "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
+    }))
+    # embed returns 3 vectors (one per chunk)
+    fake_router.embed = MagicMock(return_value=[[0.1] * 1024] * 3)
+
+    extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+
+    chunks = db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).all()
+    assert len(chunks) == 3
+    assert [c.chunk_index for c in chunks] == [0, 1, 2]
+
+
+def test_extract_writes_embeddings(db_session):
+    """After extract_chapter, vec_chunks should have rows for each chunk."""
+    from sqlalchemy import text
+
+    p, ch = _seed_chapter(db_session, content="段落一。\n\n段落二。")
+    fake_router = _fake_router(json.dumps({
+        "summary": "x",
+        "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
+    }))
+    fake_router.embed = MagicMock(return_value=[[0.5] * 1024, [0.6] * 1024])
+
+    extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+
+    rows = db_session.execute(text("SELECT count() FROM vec_chunks")).scalar()
+    assert rows == 2
+
+
+def test_extract_rerun_overwrites_chunks(db_session):
+    """Re-finalize should delete old chunks and write new ones."""
+    from app.memory.schema import ChunkMeta
+
+    p, ch = _seed_chapter(db_session, content="段落一。\n\n段落二。")
+    fake_router = _fake_router(json.dumps({
+        "summary": "first",
+        "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
+    }))
+    fake_router.embed = MagicMock(return_value=[[0.1] * 1024] * 2)
+    extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+    assert db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).count() == 2
+
+    # Re-run with different content (4 paragraphs)
+    ch.content = "新内容。\n\n段落二。\n\n段落三。\n\n段落四。"
+    db_session.commit()
+    fake_router.embed = MagicMock(return_value=[[0.2] * 1024] * 4)
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "second",
+            "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+    # 4 new chunks (2 old deleted + 4 new written)
+    assert db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).count() == 4
+
+
+def test_extract_no_content_no_chunks(db_session):
+    """Empty chapter content → 0 chunks, no embedding call."""
+    from app.memory.schema import ChunkMeta
+
+    p, ch = _seed_chapter(db_session, content="")
+    fake_router = _fake_router(json.dumps({
+        "summary": "x",
+        "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
+    }))
+    fake_router.embed = MagicMock()
+
+    extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+
+    assert db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).count() == 0
+    fake_router.embed.assert_not_called()
+
+
+def test_extract_embedding_failure_rolls_back(db_session):
+    """If embed() raises, the entire finalize should roll back."""
+    from app.memory.schema import ChunkMeta, PendingUpdate
+
+    p, ch = _seed_chapter(db_session, content="段落内容。")
+    fake_router = _fake_router(json.dumps({
+        "summary": "x",
+        "entities": {
+            "new_characters": [{"name": "X", "role": "extra", "description": "y"}],
+            "updated_characters": [], "new_lore": [], "updated_lore": [],
+        }
+    }))
+    fake_router.embed = MagicMock(side_effect=RuntimeError("embedding API down"))
+
+    with pytest.raises(RuntimeError):
+        extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+
+    # Nothing should be committed
+    db_session.expire_all()
+    assert db_session.query(PendingUpdate).filter_by(chapter_id=ch.id).count() == 0
+    assert db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).count() == 0
+    chapter = db_session.get(Chapter, ch.id)
+    assert chapter.summary == ""  # not set
+    assert chapter.status != "final"
+
+
+def test_extract_batch_split_for_long_chapter(db_session):
+    """Chapter with > 50 paragraphs → embed() called multiple times (batch=50)."""
+    from app.memory.schema import ChunkMeta
+
+    # 60 paragraphs
+    content = "\n\n".join(f"段落 {i}。" for i in range(60))
+    p, ch = _seed_chapter(db_session, content=content)
+    fake_router = _fake_router(json.dumps({
+        "summary": "x",
+        "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
+    }))
+    # First batch returns 50 vectors, second batch returns 10.
+    fake_router.embed = MagicMock(
+        side_effect=[[ [0.1] * 1024 ] * 50, [ [0.2] * 1024 ] * 10]
+    )
+
+    extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
+
+    assert fake_router.embed.call_count == 2
+    assert db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).count() == 60

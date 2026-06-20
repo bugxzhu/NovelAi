@@ -5,7 +5,7 @@ We pair it with chunk_meta (standard ORM table) via shared primary key.
 """
 import struct
 
-from sqlalchemy import bindparam, text as sql_text
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
 
 from app.memory.schema import ChunkMeta
@@ -23,13 +23,16 @@ def delete_chapter_chunks(db: Session, chapter_id: int) -> None:
         sql_text("DELETE FROM chunk_meta WHERE chapter_id = :cid"),
         {"cid": chapter_id},
     )
-    # Use expanding bindparam: SQLAlchemy replaces :rowids with ?, ?, ... at
-    # execute time and accepts a list value (no executemany interpretation).
+    # Build named placeholders manually: SQLAlchemy's `expanding=True` bindparam
+    # renders `IN ((?, ?))` which SQLite parses as a row-value comparison and
+    # rejects with "row value misused" when len(rowids) >= 2. Positional `?`
+    # placeholders don't accept a list as execute params in SQLAlchemy 2.0
+    # (it expects dicts). Named binds (r0, r1, ...) sidestep both issues.
+    placeholders = ",".join(f":r{i}" for i in range(len(rowids)))
+    params = {f"r{i}": rid for i, rid in enumerate(rowids)}
     db.execute(
-        sql_text("DELETE FROM vec_chunks WHERE rowid IN (:rowids)").bindparams(
-            bindparam("rowids", expanding=True)
-        ),
-        {"rowids": rowids},
+        sql_text(f"DELETE FROM vec_chunks WHERE rowid IN ({placeholders})"),
+        params,
     )
 
 

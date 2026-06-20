@@ -10,7 +10,11 @@ Flow:
     6. Atomic transaction: write generation_log row, DELETE old status='pending'
        rows for this chapter, INSERT new pending rows, UPDATE chapter.summary /
        content_hash / status='final'. Any failure rolls back the entire txn.
-    7. Return ExtractionResult.
+    7. M3b: chunk chapter.content via chunk_markdown, batch-embed the chunks
+       via router.embed (batch size 50), DELETE old chunks for the chapter,
+       INSERT new chunk_meta + vec_chunks rows. Runs inside the same atomic
+       transaction as step 6 — if embedding fails, all writes roll back.
+    8. Return ExtractionResult.
 
 Race contract:
     extract_chapter is NOT safe to run concurrently with accept/reject operations
@@ -33,9 +37,11 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.llm.base import LLMRequest
+from app.llm.chunking import chunk_markdown
 from app.llm.prompts import render
 from app.llm.router import ModelRouter, default_router
 from app.memory.errors import ChapterNotFoundError, ExtractionError
+from app.memory.vectors import delete_chapter_chunks, insert_chunk
 from app.memory.schema import (
     Chapter,
     Character,
@@ -357,6 +363,31 @@ def extract_chapter(
         chapter.summary = summary
         chapter.content_hash = new_hash
         chapter.status = "final"
+
+        # M3b: chunking + embedding (same atomic transaction). If embed()
+        # fails here, the pending_updates + chapter writes above roll back too.
+        chunks = chunk_markdown(chapter.content or "")
+        if chunks:
+            BATCH = 50
+            all_embeddings: list[list[float]] = []
+            for i in range(0, len(chunks), BATCH):
+                batch_texts = [c.text for c in chunks[i:i + BATCH]]
+                all_embeddings.extend(router.embed(batch_texts))
+
+            # Delete old chunks for this chapter
+            delete_chapter_chunks(db, chapter_id)
+
+            # Insert new chunks (chunk_index = position in the chunk list)
+            for idx, (chunk, embedding) in enumerate(zip(chunks, all_embeddings)):
+                insert_chunk(
+                    db,
+                    chapter_id=chapter_id,
+                    chunk_index=idx,
+                    chunk_type=chunk.chunk_type,
+                    text=chunk.text,
+                    char_count=chunk.char_count,
+                    embedding=embedding,
+                )
 
         db.commit()
     except Exception:

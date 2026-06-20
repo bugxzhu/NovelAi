@@ -137,3 +137,31 @@ def test_delete_nonexistent_chapter_noop(db_session):
     from app.memory.vectors import delete_chapter_chunks
     delete_chapter_chunks(db_session, 99999)
     db_session.commit()
+
+
+def test_delete_multiple_chunks_does_not_misuse_row_value(db_session):
+    """Regression: deleting 2+ chunks at once must not raise
+    "row value misused". SQLAlchemy's `expanding=True` bindparam renders
+    `IN ((?, ?))` which SQLite parses as a row comparison — manual named
+    binds sidestep the issue. This test pins the fix.
+    """
+    from app.memory.vectors import delete_chapter_chunks, insert_chunk
+    cid = _seed_chapter(db_session)
+    insert_chunk(db_session, chapter_id=cid, chunk_index=0,
+                 chunk_type="paragraph", text="a", char_count=1,
+                 embedding=[0.1] * 1024)
+    insert_chunk(db_session, chapter_id=cid, chunk_index=1,
+                 chunk_type="paragraph", text="b", char_count=1,
+                 embedding=[0.2] * 1024)
+    insert_chunk(db_session, chapter_id=cid, chunk_index=2,
+                 chunk_type="paragraph", text="c", char_count=1,
+                 embedding=[0.3] * 1024)
+    db_session.commit()
+
+    delete_chapter_chunks(db_session, cid)
+    db_session.commit()
+
+    from app.memory.schema import ChunkMeta
+    assert db_session.query(ChunkMeta).filter_by(chapter_id=cid).count() == 0
+    rows = db_session.execute(text("SELECT count() FROM vec_chunks")).scalar()
+    assert rows == 0
