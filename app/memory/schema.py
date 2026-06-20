@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, JSON
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.memory.base import Base
@@ -194,4 +194,26 @@ class PendingUpdate(Base):
     __table_args__ = (
         Index("idx_pending_project_status", "project_id", "status"),
         Index("idx_pending_chapter", "chapter_id"),
+    )
+
+
+class ChunkMeta(Base):
+    """Chunk metadata table. Each row corresponds to a row in the vec_chunks
+    virtual table (same primary key). M3b pairs this with sqlite-vec for
+    semantic retrieval of past chapter content."""
+    __tablename__ = "chunk_meta"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_type: Mapped[str] = mapped_column(String(20), nullable=False)  # paragraph | dialogue | description
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    char_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+
+    __table_args__ = (
+        UniqueConstraint("chapter_id", "chunk_index", name="uq_chunk_chapter_index"),
+        Index("idx_chunk_chapter", "chapter_id"),
     )
