@@ -13,6 +13,7 @@ import type {
   CharacterCreate, CharacterUpdate,
   ChapterCreate, ChapterUpdate,
   PendingStatus,
+  RelationshipCreate, RelationshipUpdate,
 } from "./types";
 
 // Projects
@@ -223,6 +224,11 @@ export function useAcceptPendingUpdate() {
       if (data.target_table === "character_states") {
         qc.invalidateQueries({ queryKey: ["character-states"] });
       }
+      // M3c-A: relationships target_id is null; invalidate all relationships caches
+      if (data.target_table === "relationships") {
+        qc.invalidateQueries({ queryKey: ["relationships"] });
+        qc.invalidateQueries({ queryKey: ["relationship-history"] });
+      }
     },
   });
 }
@@ -246,5 +252,66 @@ export function useCharacterStates(characterId: number | null) {
     queryKey: ["character-states", characterId],
     queryFn: () => api.listCharacterStates(characterId!),
     enabled: characterId != null,
+  });
+}
+
+// === M3c-A: Relationships ===
+
+export function useRelationships(projectId: number, opts?: { includeHistory?: boolean }) {
+  return useQuery({
+    queryKey: ["relationships", projectId, opts?.includeHistory ?? false],
+    queryFn: () => api.listRelationships(projectId, opts),
+  });
+}
+
+export function useRelationshipHistory(
+  fromId: number | null,
+  toId: number | null,
+) {
+  return useQuery({
+    queryKey: ["relationship-history", fromId, toId],
+    queryFn: () => api.getRelationshipHistory(fromId!, toId!),
+    enabled: fromId != null && toId != null,
+  });
+}
+
+export function useCreateRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RelationshipCreate) => api.createRelationship(data),
+    onSuccess: (data) =>
+      qc.invalidateQueries({ queryKey: ["relationships", data.project_id] }),
+  });
+}
+
+export function useUpdateRelationship(id: number, projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RelationshipUpdate) => api.updateRelationship(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["relationships", projectId] });
+      // History endpoint may also change if strength/type changed
+      qc.invalidateQueries({ queryKey: ["relationship-history"] });
+    },
+  });
+}
+
+export function useDeleteRelationship(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteRelationship(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["relationships", projectId] }),
+  });
+}
+
+export function useSoftCloseRelationship(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, validToChapter }: { id: number; validToChapter: number }) =>
+      api.softCloseRelationship(id, validToChapter),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["relationships", projectId] });
+      qc.invalidateQueries({ queryKey: ["relationship-history"] });
+    },
   });
 }
