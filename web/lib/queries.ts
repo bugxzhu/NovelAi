@@ -12,6 +12,7 @@ import type {
   LoreCreate, LoreUpdate,
   CharacterCreate, CharacterUpdate,
   ChapterCreate, ChapterUpdate,
+  PendingStatus,
 } from "./types";
 
 // Projects
@@ -177,5 +178,58 @@ export function useGenerationLog(id: number) {
   return useQuery({
     queryKey: ["generation-log", id],
     queryFn: () => api.getGenerationLog(id),
+  });
+}
+
+// === M3a: Pending Updates ===
+
+export function usePendingUpdates(
+  projectId: number,
+  status: PendingStatus = "pending",
+  chapterId?: number
+) {
+  return useQuery({
+    queryKey: ["pending-updates", projectId, status, chapterId],
+    queryFn: () => api.listPendingUpdates({ project_id: projectId, status, chapter_id: chapterId }),
+  });
+}
+
+export function usePendingCount(projectId: number) {
+  return useQuery({
+    queryKey: ["pending-count", projectId],
+    queryFn: async () => {
+      const list = await api.listPendingUpdates({
+        project_id: projectId,
+        status: "pending",
+        limit: 200,
+      });
+      return list.length;
+    },
+    staleTime: 5_000,
+  });
+}
+
+export function useAcceptPendingUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.acceptPendingUpdate(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pending-updates"] });
+      qc.invalidateQueries({ queryKey: ["pending-count"] });
+      qc.invalidateQueries({ queryKey: ["characters"] });
+      qc.invalidateQueries({ queryKey: ["lore"] });
+    },
+  });
+}
+
+export function useRejectPendingUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: number; note?: string }) =>
+      api.rejectPendingUpdate(id, note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pending-updates"] });
+      qc.invalidateQueries({ queryKey: ["pending-count"] });
+    },
   });
 }
