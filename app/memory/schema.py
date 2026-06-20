@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, JSON, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, JSON, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.memory.base import Base
@@ -247,4 +247,53 @@ class CharacterState(Base):
     __table_args__ = (
         Index("idx_char_state_char_chapter", "character_id", "chapter_id"),
         Index("idx_char_state_chapter", "chapter_id"),
+    )
+
+
+class Relationship(Base):
+    """Temporal log of directed relationships between characters. M3c-A:
+    append-only version log — accept handler soft-closes the previous current-valid
+    row (sets valid_to_chapter) before INSERTing a new one. The partial unique
+    index uq_rel_current guarantees at most one current-valid row per direction."""
+    __tablename__ = "relationships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    from_char_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+    )
+    to_char_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+    )
+
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    strength: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+    valid_from_chapter: Mapped[int] = mapped_column(Integer, nullable=False)
+    valid_to_chapter: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    change_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    extractor_log_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pending_update_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+    __table_args__ = (
+        # Partial indexes on SQLite — declared via sqlite_where in Index.
+        Index(
+            "idx_rel_from_to_current",
+            "from_char_id", "to_char_id",
+            sqlite_where=text("valid_to_chapter IS NULL"),
+        ),
+        Index("idx_rel_project", "project_id", "from_char_id"),
+        # Partial UNIQUE: same direction can only have one current-valid row.
+        Index(
+            "uq_rel_current", "from_char_id", "to_char_id",
+            unique=True,
+            sqlite_where=text("valid_to_chapter IS NULL"),
+        ),
     )
