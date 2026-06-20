@@ -213,11 +213,16 @@ export function useAcceptPendingUpdate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.acceptPendingUpdate(id),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["pending-updates"] });
       qc.invalidateQueries({ queryKey: ["pending-count"] });
       qc.invalidateQueries({ queryKey: ["characters"] });
       qc.invalidateQueries({ queryKey: ["lore"] });
+      // M3c-B: character_states target_id is null; invalidate all character-states
+      // caches (single-user, low cardinality) when a state change is accepted
+      if (data.target_table === "character_states") {
+        qc.invalidateQueries({ queryKey: ["character-states"] });
+      }
     },
   });
 }
@@ -231,5 +236,15 @@ export function useRejectPendingUpdate() {
       qc.invalidateQueries({ queryKey: ["pending-updates"] });
       qc.invalidateQueries({ queryKey: ["pending-count"] });
     },
+  });
+}
+
+// === M3c-B: Character States ===
+
+export function useCharacterStates(characterId: number | null) {
+  return useQuery({
+    queryKey: ["character-states", characterId],
+    queryFn: () => api.listCharacterStates(characterId!),
+    enabled: characterId != null,
   });
 }
