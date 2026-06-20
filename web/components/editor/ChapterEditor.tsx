@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import type { MarkdownStorage } from "tiptap-markdown";
@@ -27,11 +27,16 @@ export function ChapterEditor({
   onDelete?: () => void;
 }) {
   const autosave = useChapterAutosave(chapter.id, chapter.project_id);
+  // IME (中文输入法) composition state — skip onUpdate while user is mid-composition
+  // to prevent stale pinyin characters from being serialized into Markdown, and to
+  // avoid React re-renders disturbing the browser-locked DOM during composition.
+  const isComposingRef = useRef(false);
 
   const editor = useEditor({
     extensions,
     content: chapter.content || "",
     onUpdate: ({ editor }) => {
+      if (isComposingRef.current) return;
       autosave.schedule(getMarkdown(editor));
     },
     onBlur: ({ editor }) => {
@@ -40,6 +45,21 @@ export function ChapterEditor({
     editorProps: {
       attributes: {
         class: "prose max-w-none focus:outline-none min-h-[60vh] p-8 font-serif leading-relaxed",
+      },
+      handleDOMEvents: {
+        compositionstart: () => {
+          isComposingRef.current = true;
+          return false;
+        },
+        compositionend: () => {
+          isComposingRef.current = false;
+          // compositionend fires when user picks a candidate; the doc has the final
+          // character(s) now. Use the outer-scope `editor` closure to schedule a save.
+          if (editor) {
+            autosave.schedule(getMarkdown(editor));
+          }
+          return false;
+        },
       },
     },
   });
