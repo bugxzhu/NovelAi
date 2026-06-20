@@ -252,3 +252,43 @@ export interface ContextBundlePreview {
     summary: string;
   }>;
 }
+
+// === M3a: Pending Updates ===
+
+export interface PendingUpdateRead {
+  id: number;
+  project_id: number;
+  chapter_id: number;
+  update_type: string;
+  operation: "create" | "update";
+  target_table: "characters" | "lore_entries";
+  target_id: number | null;
+  reason: string;
+  status: "pending" | "accepted" | "rejected";
+  entity_name: string;
+  entity_type: string;
+  field_name: string;
+  old_value: string;
+  proposed_value: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PendingUpdateDetail extends PendingUpdateRead {
+  proposed_change: Record<string, unknown>;
+  decision_note: string;
+  decided_at: string | null;
+  extractor_model: string | null;
+  extractor_log_id: number | null;
+  chapter_title: string;
+  target_entity_name: string | null;
+}
+
+export interface FinalizeResponse {
+  chapter_id: number;
+  summary: string;
+  pending_created: number;
+  log_id: number;
+}
+
+export type PendingStatus = "pending" | "accepted" | "rejected" | "all";

@@ -5,6 +5,8 @@ import type {
   Character, CharacterCreate, CharacterUpdate,
   Chapter, ChapterCreate, ChapterUpdate,
   GenerationLogRead, GenerationLogDetail,
+  PendingUpdateRead, PendingUpdateDetail,
+  FinalizeResponse, PendingStatus,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -102,4 +104,25 @@ export const api = {
     http<GenerationLogRead[]>(`/api/generation-logs${qs(params as Record<string, unknown>)}`),
   getGenerationLog: (id: number) =>
     http<GenerationLogDetail>(`/api/generation-logs/${id}`),
+
+  // M3a: Pending Updates
+  listPendingUpdates: (params: {
+    project_id: number;
+    status?: PendingStatus;
+    chapter_id?: number;
+    limit?: number;
+    offset?: number;
+  }) =>
+    http<PendingUpdateRead[]>(`/api/pending-updates${qs(params as Record<string, unknown>)}`),
+  getPendingUpdate: (id: number) =>
+    http<PendingUpdateDetail>(`/api/pending-updates/${id}`),
+  acceptPendingUpdate: (id: number) =>
+    http<PendingUpdateRead>(`/api/pending-updates/${id}/accept`, { method: "POST" }),
+  rejectPendingUpdate: (id: number, note?: string) =>
+    http<PendingUpdateRead>(`/api/pending-updates/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ note: note ?? "" }),
+    }),
+  finalizeChapter: (chapterId: number) =>
+    http<FinalizeResponse>(`/api/chapters/${chapterId}/finalize`, { method: "POST" }),
 };
