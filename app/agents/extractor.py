@@ -368,7 +368,7 @@ def extract_chapter(
         # fails here, the pending_updates + chapter writes above roll back too.
         chunks = chunk_markdown(chapter.content or "")
         if chunks:
-            BATCH = 50
+            BATCH = 10  # some providers (e.g. DashScope) limit batch to 10
             all_embeddings: list[list[float]] = []
             for i in range(0, len(chunks), BATCH):
                 batch_texts = [c.text for c in chunks[i:i + BATCH]]
