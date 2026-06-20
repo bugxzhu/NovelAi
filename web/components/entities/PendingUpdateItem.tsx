@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { useAcceptPendingUpdate, useRejectPendingUpdate } from "@/lib/queries";
+import { loreTypeLabel } from "@/lib/types";
 import type { PendingUpdateRead } from "@/lib/types";
 
 function formatTime(iso: string): string {
@@ -40,7 +41,7 @@ export function PendingUpdateItem({ pending }: { pending: PendingUpdateRead }) {
           </span>
         </div>
         {!isCharacter && pending.entity_type && (
-          <span className="text-xs text-text-dim">[{pending.entity_type}]</span>
+          <span className="text-xs text-text-dim">[{loreTypeLabel(pending.entity_type)}]</span>
         )}
       </div>
 

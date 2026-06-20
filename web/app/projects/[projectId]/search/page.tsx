@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useChapters, useCharacters, useLore } from "@/lib/queries";
+import { loreTypeLabel } from "@/lib/types";
 import { SidePanel } from "@/components/layout/SidePanel";
 import { ChapterWorkspaceGrid } from "@/components/layout/ChapterWorkspaceGrid";
 import Link from "next/link";
@@ -76,7 +77,7 @@ export default function SearchPage() {
                     href={`/projects/${pid}/lore`}
                     className="block px-2 py-1 hover:bg-hover rounded"
                   >
-                    {l.name} <span className="text-text-muted">({l.type})</span>
+                    {l.name} <span className="text-text-muted">({loreTypeLabel(l.type)})</span>
                   </Link>
                 ))}
               </Section>

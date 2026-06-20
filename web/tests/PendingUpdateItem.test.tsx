@@ -67,7 +67,7 @@ describe("PendingUpdateItem", () => {
       }} />
     );
     expect(screen.getByText(/新建设定/)).toBeInTheDocument();
-    expect(screen.getByText("[location]")).toBeInTheDocument();
+    expect(screen.getByText("[地点]")).toBeInTheDocument();
   });
 
   it("calls accept mutation on click", async () => {

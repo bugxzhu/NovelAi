@@ -58,6 +58,19 @@ export type LoreType =
   | "concept"
   | "custom";
 
+export const LORE_TYPE_LABELS: Record<LoreType, string> = {
+  location: "地点",
+  faction: "势力",
+  item: "物品",
+  organization: "组织",
+  concept: "概念",
+  custom: "自定义",
+};
+
+export function loreTypeLabel(t: string): string {
+  return LORE_TYPE_LABELS[t as LoreType] ?? t;
+}
+
 export interface LoreEntry {
   id: number;
   project_id: number;

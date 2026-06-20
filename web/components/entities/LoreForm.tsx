@@ -107,9 +107,12 @@ export function LoreForm({
           }}
           className="bg-input border border-line rounded p-2 text-text"
         >
-          {["location", "faction", "item", "organization", "concept", "custom"].map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
+          <option value="location">地点</option>
+          <option value="faction">势力</option>
+          <option value="item">物品</option>
+          <option value="organization">组织</option>
+          <option value="concept">概念</option>
+          <option value="custom">自定义</option>
         </select>
       </div>
 
