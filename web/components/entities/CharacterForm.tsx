@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUpdateCharacter, useDeleteCharacter, useLore } from "@/lib/queries";
+import { CharacterStateTimeline } from "@/components/entities/CharacterStateTimeline";
 import { debounce } from "@/lib/debounce";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -171,6 +172,8 @@ export function CharacterForm({
           ))}
         </div>
       </div>
+
+      <CharacterStateTimeline characterId={character.id} />
     </div>
   );
 }
