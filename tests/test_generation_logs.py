@@ -12,6 +12,8 @@ def fake_router(monkeypatch):
             yield StreamEvent(type="token", text="Hi")
             yield StreamEvent(type="done", input_tokens=10, output_tokens=2,
                               stop_reason="end_turn")
+        def embed(self, texts, model=None):
+            return [[0.1] * 1024] * len(texts)
     fake = _Fake()
     monkeypatch.setattr("app.api.chapters_generate.default_router", fake)
     return fake

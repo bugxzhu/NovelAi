@@ -55,6 +55,18 @@
 {% endfor %}
 {% endif %}
 
+{% if retrieved_chunks %}
+# 相关场景预览（向量检索召回）
+
+以下是与本段情节语义相关的过往章节片段，供参考保持前后一致：
+
+{% for chunk in retrieved_chunks %}
+## [{{ chunk.chapter_title }}]（相似度 {{ "%.2f"|format(chunk.score) }}）
+> {{ chunk.text }}
+
+{% endfor %}
+{% endif %}
+
 # 本次写作任务
 
 请扩写以下情节片段：

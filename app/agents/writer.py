@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.llm.base import LLMRequest
 from app.llm.prompts import render
 from app.llm.router import ModelRouter, default_router
+from app.agents.retrieval import assemble_retrieval_context
 from app.memory.retrieval import ContextBundle, assemble_context
 from app.memory.schema import Chapter, GenerationLog
 
@@ -112,6 +113,20 @@ def prepare_generation(
         location_id=location_id,
     )
 
+    # M3b: vector retrieval layer
+    character_names = [c.name for c in bundle.characters]
+    query_text = beat_text
+    if character_names:
+        query_text = beat_text + " " + " ".join(character_names)
+
+    retrieved = assemble_retrieval_context(
+        db,
+        current_chapter_id=chapter_id,
+        query_text=query_text,
+        router=router,
+    )
+    bundle.retrieved_chunks = retrieved
+
     system_prompt = render("writer/system.j2")
     user_prompt = render(
         "writer/user.j2",
@@ -125,6 +140,7 @@ def prepare_generation(
         recent_chapter_summaries=bundle.recent_chapter_summaries,
         beat_text=beat_text,
         instruction=instruction,
+        retrieved_chunks=retrieved,  # M3b new
     )
 
     _, model_name = router.resolve_model(model_task)

@@ -30,6 +30,8 @@ def test_full_m2a_workflow(client, monkeypatch):
             yield StreamEvent(type="token", text="李雷推开了酒馆的门。")
             yield StreamEvent(type="done", input_tokens=3200, output_tokens=850,
                               stop_reason="end_turn")
+        def embed(self, texts, model=None):
+            return [[0.1] * 1024] * len(texts)
     monkeypatch.setattr("app.api.chapters_generate.default_router", _Fake())
 
     # Seed project + world + chars + lore + 1 prior chapter with summary

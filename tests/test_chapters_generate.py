@@ -16,6 +16,8 @@ def fake_router(monkeypatch):
             yield StreamEvent(type="token", text="world")
             yield StreamEvent(type="done", input_tokens=10, output_tokens=2,
                               stop_reason="end_turn")
+        def embed(self, texts, model=None):
+            return [[0.1] * 1024] * len(texts)
     fake = _Fake()
     monkeypatch.setattr("app.api.chapters_generate.default_router", fake)
     return fake
@@ -136,6 +138,8 @@ def test_generate_sse_emits_error_event_on_llm_failure(client, monkeypatch):
             yield StreamEvent(type="token", text="partial")
             yield StreamEvent(type="error", error_message="API dead",
                               error_code="RuntimeError")
+        def embed(self, texts, model=None):
+            return [[0.1] * 1024] * len(texts)
     monkeypatch.setattr("app.api.chapters_generate.default_router", _ErrRouter())
     pid, chars, loc, ch = _seed(client)
     with client.stream("POST", f"/api/chapters/{ch}/generate",
@@ -190,6 +194,8 @@ def test_generate_marks_log_client_disconnected_on_premature_close(client, monke
                 yield StreamEvent(type="token", text=f"chunk{i} ")
             yield StreamEvent(type="done", input_tokens=10, output_tokens=50,
                               stop_reason="end_turn")
+        def embed(self, texts, model=None):
+            return [[0.1] * 1024] * len(texts)
     monkeypatch.setattr("app.api.chapters_generate.default_router", _SlowRouter())
 
     pid = client.post("/api/projects", json={"title": "P"}).json()["id"]

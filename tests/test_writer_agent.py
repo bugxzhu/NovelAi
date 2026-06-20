@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.agents.writer import (
@@ -14,6 +16,7 @@ def db_session(tmp_path, monkeypatch):
     from app.memory import session as session_module
     from app.memory.session import _build_engine, init_db
     from sqlalchemy.orm import sessionmaker
+    from sqlalchemy import text
     db_file = tmp_path / "test.db"
     monkeypatch.setattr("app.memory.session.settings.db_path", db_file)
     new_engine = _build_engine(db_file)
@@ -22,6 +25,12 @@ def db_session(tmp_path, monkeypatch):
     monkeypatch.setattr(session_module, "engine", new_engine)
     monkeypatch.setattr(session_module, "SessionLocal", new_session)
     init_db()
+    # M3b: create vec_chunks virtual table (Base.metadata.create_all doesn't)
+    with new_engine.connect() as conn:
+        conn.execute(text(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding FLOAT[1024] distance_metric=cosine)"
+        ))
+        conn.commit()
     with new_session() as s:
         yield s
 
@@ -58,6 +67,9 @@ class FakeRouter:
     def stream(self, request):
         for e in self._events:
             yield e
+    # M3b: default embed returns 1024-dim vectors; tests override per-case
+    def embed(self, texts, model=None):
+        return [[0.1] * 1024] * len(texts)
 
 
 def test_prepare_creates_log_with_streaming_status(db_session):
@@ -239,3 +251,89 @@ def test_finalize_done_preserves_chapter_on_error(db_session):
     # Untouched
     assert chapter.last_involved_character_ids == [chars[0].id]
     assert chapter.last_location_id is None
+
+
+def test_writer_prompt_includes_retrieved_chunks(db_session):
+    """When chunks exist in DB, writer prompt should contain '相关场景预览' section."""
+    from app.memory.schema import Chapter, Project
+    from app.memory.vectors import insert_chunk
+    from app.agents.writer import prepare_generation
+
+    # Seed project + 2 chapters
+    p = Project(title="P", genre="g", premise="p")
+    db_session.add(p); db_session.flush()
+    ch1 = Chapter(project_id=p.id, order_index=1, title="第一章", content="past chapter content")
+    ch2 = Chapter(project_id=p.id, order_index=2, title="第二章", content="current chapter")
+    db_session.add_all([ch1, ch2]); db_session.flush()
+
+    # Add a chunk to chapter 1 (the past chapter)
+    insert_chunk(db_session, chapter_id=ch1.id, chunk_index=0,
+                 chunk_type="paragraph", text="past chunk text", char_count=15,
+                 embedding=[0.9] * 1024)
+    db_session.commit()
+
+    fake_router = FakeRouter([
+        StreamEvent(type="token", text="output"),
+        StreamEvent(type="done", input_tokens=10, output_tokens=2, stop_reason="end_turn"),
+    ])
+    # embed returns a vector close to the chunk's vector
+    fake_router.embed = MagicMock(return_value=[[0.9] * 1024])
+
+    prep = prepare_generation(
+        db_session, chapter_id=ch2.id, beat_text="test beat",
+        instruction="", involved_character_ids=[], location_id=None,
+        model_task="writer_long", max_tokens=4096, router=fake_router,
+    )
+
+    assert "相关场景预览" in prep.user_prompt
+    assert "past chunk text" in prep.user_prompt
+
+
+def test_writer_prompt_omits_section_when_no_chunks(db_session):
+    """When no chunks exist, writer prompt should NOT contain '相关场景预览'."""
+    from app.memory.schema import Chapter, Project
+    from app.agents.writer import prepare_generation
+
+    p = Project(title="P"); db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1")
+    db_session.add(ch); db_session.commit()
+
+    fake_router = FakeRouter([
+        StreamEvent(type="done", input_tokens=1, output_tokens=1, stop_reason="end_turn"),
+    ])
+    fake_router.embed = MagicMock(return_value=[[0.5] * 1024])
+
+    prep = prepare_generation(
+        db_session, chapter_id=ch.id, beat_text="x", instruction="",
+        involved_character_ids=[], location_id=None,
+        model_task="writer_long", max_tokens=4096, router=fake_router,
+    )
+    assert "相关场景预览" not in prep.user_prompt
+
+
+def test_writer_query_includes_character_names(db_session):
+    """The embed query should include character names from involved characters."""
+    from app.memory.schema import Chapter, Project, Character
+    from app.agents.writer import prepare_generation
+
+    p = Project(title="P"); db_session.add(p); db_session.flush()
+    c = Character(project_id=p.id, name="李雷", role="protagonist")
+    ch = Chapter(project_id=p.id, order_index=1, title="C1")
+    db_session.add_all([c, ch]); db_session.commit()
+
+    fake_router = FakeRouter([
+        StreamEvent(type="done", input_tokens=1, output_tokens=1, stop_reason="end_turn"),
+    ])
+    fake_router.embed = MagicMock(return_value=[[0.5] * 1024])
+
+    prepare_generation(
+        db_session, chapter_id=ch.id, beat_text="beat text",
+        instruction="", involved_character_ids=[c.id], location_id=None,
+        model_task="writer_long", max_tokens=4096, router=fake_router,
+    )
+
+    # embed should have been called with a query containing the character name
+    call_args = fake_router.embed.call_args
+    query = call_args[0][0][0]  # first arg = texts list, first text
+    assert "李雷" in query
+    assert "beat text" in query

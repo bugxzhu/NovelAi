@@ -64,6 +64,7 @@ def test_render_user_full():
         recent_chapter_summaries=[_fake_summary()],
         beat_text="主角遇旧友",
         instruction="氛围压抑",
+        retrieved_chunks=[],
     )
     assert "TestNovel" in out
     assert "Medieval" in out
@@ -86,6 +87,7 @@ def test_render_user_minimal_no_world_no_lore_no_recent():
         recent_chapter_summaries=[],
         beat_text="x",
         instruction="",
+        retrieved_chunks=[],
     )
     assert "TestNovel" in out
     assert "Li" in out
@@ -111,6 +113,7 @@ def test_render_user_empty_characters_list():
         recent_chapter_summaries=[],
         beat_text="x",
         instruction="",
+        retrieved_chunks=[],
     )
     assert "TestNovel" in out
     assert "x" in out

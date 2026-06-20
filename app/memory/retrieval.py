@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import select
@@ -52,6 +52,7 @@ class ContextBundle:
     location_lore: list[LoreEntry]
     plot_lines: list[Any]  # M3 will replace with list[PlotLine]
     recent_chapter_summaries: list[ChapterSummary]
+    retrieved_chunks: list[Any] = field(default_factory=list)  # M3b: list[RetrievedChunk]
 
 
 def _fetch_location_with_ancestors(
