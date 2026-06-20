@@ -208,7 +208,7 @@ M3a 不动 Chapter schema。复用现有字段：
 | `proposed_change` JSON | 4 种 shape 由 `operation`+`target_table` 决定 | 类型安全；accept 时按 shape 决定 INSERT/PATCH |
 | `extractor_log_id` 关联 generation_logs | 复用 M2a 审计表 | 抽取也是 LLM 调用，应可审计；prompt + response 都进 generation_logs |
 | `decision_note` | 用户 reject 时可选填理由 | 为 M3c "否定记忆"做准备（M3a 不读这个字段） |
-| 迁移策略 | drop & recreate（沿用 M2a/M2b 策略） | 本地无生产数据；Alembic 留到首次需要保留数据时 |
+| 迁移策略 | **Alembic**（M3a 后引入） | 保留数据；drop & recreate 策略已弃用 |
 
 ---
 

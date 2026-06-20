@@ -39,6 +39,37 @@ cd web && npm test
 cd web && npm run test:e2e
 ```
 
+## 数据库迁移（Alembic）
+
+本项目用 Alembic 管理 schema 演进。新增表/列时：
+
+```bash
+# 1. 修改 app/memory/schema.py（添加/修改 ORM 类）
+# 2. 生成迁移脚本（自动对比 Base.metadata 与当前 DB）
+alembic revision --autogenerate -m "描述本次变更"
+
+# 3. 检查 alembic/versions/<新文件>.py，必要时手动调整
+
+# 4. 应用迁移
+alembic upgrade head
+
+# 回滚到上一版本
+alembic downgrade -1
+
+# 查看当前版本
+alembic current
+```
+
+**不要再用 `rm data/novelai.db` 重建**——会丢失所有数据。
+
+**开发流程示例（加新表）：**
+1. 编辑 `app/memory/schema.py` 加 `class NewTable(Base): ...`
+2. `alembic revision --autogenerate -m "add new_table"`
+3. 检查生成的迁移文件（特别是 SQLite 不原生支持的 ALTER，autogenerate 会用 batch 模式）
+4. `alembic upgrade head`
+
+**测试**：测试用 `tmp_path` + `Base.metadata.create_all()`，不走 Alembic。
+
 ## API 一览
 
 | 资源 | 端点 |
