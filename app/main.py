@@ -8,6 +8,7 @@ from app.api import (
     chapters_finalize,
     chapters_generate,
     characters,
+    characters_states,
     deps,
     generation_logs,
     health,
@@ -47,6 +48,8 @@ def create_app() -> FastAPI:
     app.include_router(world.router, prefix="/api/projects", tags=["world"])
     app.include_router(lore.router, prefix="/api/lore", tags=["lore"])
     app.include_router(characters.router, prefix="/api/characters", tags=["characters"])
+    app.include_router(characters_states.router, prefix="/api/characters",
+                       tags=["characters"])
     app.include_router(chapters.router, prefix="/api/chapters", tags=["chapters"])
     app.include_router(chapters_generate.router, prefix="/api/chapters",
                        tags=["chapters_generate"])
