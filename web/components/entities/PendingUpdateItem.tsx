@@ -20,10 +20,24 @@ export function PendingUpdateItem({ pending }: { pending: PendingUpdateRead }) {
   const accept = useAcceptPendingUpdate();
   const reject = useRejectPendingUpdate();
 
+  const isStateChange = pending.target_table === "character_states";
   const isCharacter = pending.target_table === "characters";
-  const entityLabel = isCharacter ? "人物" : "设定";
-  const opLabel = pending.operation === "create" ? "新建" : "更新";
-  const icon = pending.operation === "create" ? "✏️" : "🔄";
+  const isLore = pending.target_table === "lore_entries";
+
+  // Header rendering
+  let icon: string;
+  let headerLabel: string;
+  if (isStateChange) {
+    icon = "📝";
+    headerLabel = `状态变化 · ${pending.entity_name}`;
+  } else {
+    const entityLabel = isCharacter ? "人物" : "设定";
+    const opLabel = pending.operation === "create" ? "新建" : "更新";
+    icon = pending.operation === "create" ? "✏️" : "🔄";
+    headerLabel = `${opLabel}${entityLabel} · ${pending.entity_name}${
+      pending.field_name ? ` · ${pending.field_name}` : ""
+    }`;
+  }
 
   const handleReject = () => {
     const note = window.prompt("拒绝理由（可选）") ?? "";
@@ -36,17 +50,18 @@ export function PendingUpdateItem({ pending }: { pending: PendingUpdateRead }) {
         <div className="flex items-center gap-2">
           <span>{icon}</span>
           <span className="text-sm">
-            {opLabel}{entityLabel} · <strong>{pending.entity_name}</strong>
-            {pending.field_name && ` · ${pending.field_name}`}
+            <strong>{headerLabel}</strong>
           </span>
         </div>
-        {!isCharacter && pending.entity_type && (
+        {isLore && pending.entity_type && (
           <span className="text-xs text-text-dim">[{loreTypeLabel(pending.entity_type)}]</span>
         )}
       </div>
 
       <div className="text-xs text-text-muted mb-2 pl-6">
-        {pending.field_name ? (
+        {isStateChange ? (
+          <div>{pending.proposed_value}</div>
+        ) : pending.field_name ? (
           <>
             <div>旧值：{pending.old_value || "(空)"}</div>
             <div>新值：{pending.proposed_value}</div>

@@ -36,7 +36,7 @@ describe("PendingUpdateItem", () => {
   it("renders create character", () => {
     renderWithProviders(<PendingUpdateItem pending={basePending} />);
     expect(screen.getByText(/新建人物/)).toBeInTheDocument();
-    expect(screen.getByText("韩梅")).toBeInTheDocument();
+    expect(screen.getByText(/新建人物.*韩梅/)).toBeInTheDocument();
     expect(screen.getByText("酒馆老板娘")).toBeInTheDocument();
     expect(screen.getByText(/第 3 段首次出现/)).toBeInTheDocument();
   });
@@ -102,5 +102,33 @@ describe("PendingUpdateItem", () => {
     );
     expect(screen.queryByRole("button", { name: /接受/ })).not.toBeInTheDocument();
     expect(screen.getByText(/已接受/)).toBeInTheDocument();
+  });
+});
+
+describe("PendingUpdateItem — character_states", () => {
+  const statePending: PendingUpdateRead = {
+    ...basePending,
+    id: 2,
+    update_type: "soft_fact",
+    target_table: "character_states",
+    entity_name: "李雷",
+    field_name: "state_snapshot",
+    proposed_value: "愤怒且受伤；决心复仇",
+    reason: "chapter_id=5 状态变化",
+  };
+
+  it("renders state change card with 📝 icon and snapshot", () => {
+    renderWithProviders(<PendingUpdateItem pending={statePending} />);
+    expect(screen.getByText(/📝/)).toBeTruthy();
+    expect(screen.getByText(/状态变化 · 李雷/)).toBeTruthy();
+    expect(screen.getByText(/李雷/)).toBeTruthy();
+    expect(screen.getByText(/愤怒且受伤；决心复仇/)).toBeTruthy();
+  });
+
+  it("does not render 旧值/新值 diff for state changes", () => {
+    renderWithProviders(<PendingUpdateItem pending={statePending} />);
+    // state_snapshot already shown via proposed_value; should NOT also show
+    // "新值：" prefix (which is for update ops with field_name)
+    expect(screen.queryByText(/新值：/)).toBeNull();
   });
 });
