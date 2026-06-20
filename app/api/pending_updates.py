@@ -8,6 +8,7 @@ from app.api.deps import get_db
 from app.memory.schema import (
     Chapter,
     Character,
+    CharacterState,
     LoreEntry,
     PendingUpdate,
 )
@@ -30,12 +31,25 @@ def _derive_summary_fields(proposed_change: dict, target_table: str) -> dict:
         field_name = proposed_change.get("field", "")
         old_value = proposed_change.get("old_value", "")
         proposed_value = proposed_change.get("description") or proposed_change.get("new_value", "")
-    else:  # lore_entries
+    elif target_table == "lore_entries":
         entity_type = proposed_change.get("type", "")
         entity_name = proposed_change.get("name", "")
         field_name = proposed_change.get("field", "")
         old_value = proposed_change.get("old_value", "")
         proposed_value = proposed_change.get("description") or proposed_change.get("new_value", "")
+    elif target_table == "character_states":
+        # M3c-B: state changes (always operation='create', target_id=null)
+        entity_type = ""
+        entity_name = proposed_change.get("character_name", "")
+        field_name = "state_snapshot"
+        old_value = ""
+        proposed_value = proposed_change.get("state_snapshot", "")
+    else:
+        entity_type = ""
+        entity_name = ""
+        field_name = ""
+        old_value = ""
+        proposed_value = ""
     return {
         "entity_name": entity_name,
         "entity_type": entity_type,
@@ -153,6 +167,30 @@ def accept_pending(pending_id: int, db: Session = Depends(get_db)):
                     name=data.get("name", ""),
                     description=data.get("description", ""),
                 ))
+            elif p.target_table == "character_states":
+                # M3c-B: INSERT temporal row + mirror to characters.current_state
+                char_id = data.get("character_id")
+                if char_id is None:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="character_states pending missing character_id",
+                    )
+                char = db.get(Character, char_id)
+                if char is None:
+                    raise HTTPException(
+                        status_code=500, detail="target character gone")
+                state = CharacterState(
+                    character_id=char_id,
+                    chapter_id=p.chapter_id,
+                    state_snapshot=data.get("state_snapshot", ""),
+                    change_summary=data.get("change_summary", ""),
+                    extractor_log_id=p.extractor_log_id,
+                    pending_update_id=p.id,
+                )
+                db.add(state)
+                db.flush()  # get state.id for audit
+                # Mirror strategy B: characters.current_state = latest snapshot
+                char.current_state = data.get("state_snapshot", "")
             else:
                 raise HTTPException(status_code=500, detail=f"unknown target_table: {p.target_table}")
         elif p.operation == "update":
