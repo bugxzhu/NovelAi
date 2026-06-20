@@ -17,6 +17,11 @@ def _build_engine(db_path: Path):
         try:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA foreign_keys=ON")
+            # M3b: load sqlite-vec extension
+            import sqlite_vec
+            dbapi_conn.enable_load_extension(True)
+            sqlite_vec.load(dbapi_conn)
+            dbapi_conn.enable_load_extension(False)
         finally:
             cursor.close()
 
