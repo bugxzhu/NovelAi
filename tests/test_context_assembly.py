@@ -214,3 +214,85 @@ def test_assemble_includes_faction_from_character_affiliations(db_session):
         involved_character_ids=[c.id],
     )
     assert any(f.name == "守夜人" for f in bundle.faction_lore)
+
+
+def test_assemble_populates_relationships_for_involved_pair(db_session):
+    """When 2+ characters are involved, their current-valid relationships appear in bundle."""
+    from app.memory.schema import Chapter, Character, Project, Relationship
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    c1 = Character(project_id=p.id, name="李雷")
+    c2 = Character(project_id=p.id, name="韩梅")
+    db_session.add_all([c1, c2]); db_session.flush()
+    db_session.add(Relationship(
+        project_id=p.id, from_char_id=c1.id, to_char_id=c2.id,
+        type="旧友", strength=0.5, valid_from_chapter=0,
+    ))
+    db_session.commit()
+
+    bundle = assemble_context(
+        db_session, chapter_id=ch.id, beat_text="x",
+        involved_character_ids=[c1.id, c2.id],
+    )
+    assert len(bundle.relationships) == 1
+    r = bundle.relationships[0]
+    assert r.from_char_id == c1.id
+    assert r.to_char_id == c2.id
+    assert r.from_name == "李雷"
+    assert r.to_name == "韩梅"
+    assert r.type == "旧友"
+    assert r.strength == 0.5
+
+
+def test_assemble_excludes_relationships_with_uninvolved(db_session):
+    """A-B relationship, but bundle only involves A and C → not included."""
+    from app.memory.schema import Chapter, Character, Project, Relationship
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    c1 = Character(project_id=p.id, name="李雷")
+    c2 = Character(project_id=p.id, name="韩梅")  # not involved
+    c3 = Character(project_id=p.id, name="王五")
+    db_session.add_all([c1, c2, c3]); db_session.flush()
+    db_session.add(Relationship(
+        project_id=p.id, from_char_id=c1.id, to_char_id=c2.id,
+        type="旧友", strength=0.5, valid_from_chapter=0,
+    ))
+    db_session.commit()
+
+    bundle = assemble_context(
+        db_session, chapter_id=ch.id, beat_text="x",
+        involved_character_ids=[c1.id, c3.id],
+    )
+    assert bundle.relationships == []
+
+
+def test_assemble_excludes_history_relationships(db_session):
+    """Soft-closed (history) relationships are NOT injected."""
+    from app.memory.schema import Chapter, Character, Project, Relationship
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    c1 = Character(project_id=p.id, name="李雷")
+    c2 = Character(project_id=p.id, name="韩梅")
+    db_session.add_all([c1, c2]); db_session.flush()
+    # Only a soft-closed history row
+    db_session.add(Relationship(
+        project_id=p.id, from_char_id=c1.id, to_char_id=c2.id,
+        type="旧友", strength=0.5,
+        valid_from_chapter=0, valid_to_chapter=ch.id,
+    ))
+    db_session.commit()
+
+    bundle = assemble_context(
+        db_session, chapter_id=ch.id, beat_text="x",
+        involved_character_ids=[c1.id, c2.id],
+    )
+    assert bundle.relationships == []

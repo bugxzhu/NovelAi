@@ -10,6 +10,7 @@ from app.memory.schema import (
     Character,
     LoreEntry,
     Project,
+    Relationship,
     WorldOverview,
 )
 
@@ -148,6 +149,29 @@ def assemble_context(
         if c.summary
     ]
 
+    # M3c-A: relationships between involved characters (current valid only)
+    char_id_set = {c.id for c in characters}
+    relationships: list[RelationshipView] = []
+    if len(char_id_set) >= 2:
+        rels = list(db.scalars(
+            select(Relationship).where(
+                Relationship.project_id == project_id,
+                Relationship.from_char_id.in_(char_id_set),
+                Relationship.to_char_id.in_(char_id_set),
+                Relationship.valid_to_chapter.is_(None),
+            )
+        ))
+        char_by_id = {c.id: c for c in characters}
+        for r in rels:
+            from_c = char_by_id.get(r.from_char_id)
+            to_c = char_by_id.get(r.to_char_id)
+            if from_c and to_c:
+                relationships.append(RelationshipView(
+                    from_char_id=r.from_char_id, to_char_id=r.to_char_id,
+                    from_name=from_c.name, to_name=to_c.name,
+                    type=r.type, strength=r.strength, description=r.description,
+                ))
+
     return ContextBundle(
         project=project,
         world_overview=world_overview,
@@ -156,7 +180,7 @@ def assemble_context(
             c.id: CharacterStateSnapshot(current_state=c.current_state)
             for c in characters
         },
-        relationships=[],  # M3 fills in
+        relationships=relationships,
         lore_entries=list(location_lore) + list(faction_lore),
         faction_lore=faction_lore,
         location_lore=location_lore,
