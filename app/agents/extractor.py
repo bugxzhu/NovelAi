@@ -49,6 +49,7 @@ from app.memory.schema import (
     LoreEntry,
     PendingUpdate,
     Project,
+    Relationship,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,8 +83,9 @@ def _build_pending_rows(
     existing_lore: list[LoreEntry],
     model_name: str,
     state_changes: list[dict] | None = None,
+    relationship_changes: list[dict] | None = None,
 ) -> list[PendingUpdate]:
-    """Convert LLM entities dict + state_changes to PendingUpdate rows.
+    """Convert LLM entities dict + state_changes + relationship_changes to PendingUpdate rows.
 
     Tolerance rules:
         - new_characters / new_lore: empty/duplicate name → skip
@@ -95,6 +97,8 @@ def _build_pending_rows(
           empty new_value → skip
         - state_changes: character_name not in existing → skip; empty name/snapshot → skip;
           missing change_summary → defaults to ""
+        - relationship_changes: from/to not in existing → skip; from==to → skip;
+          empty type → skip; strength out of [-1.0, 1.0] → clamped; non-numeric strength → 0.0
     """
     rows: list[PendingUpdate] = []
     char_by_name = {c.name: c for c in existing_characters}
@@ -279,6 +283,65 @@ def _build_pending_rows(
             status="pending",
         ))
 
+    # M3c-A: relationship_changes → soft_fact pending (target_table='relationships')
+    # Version-switch semantics: accept handler will soft-close old + INSERT new
+    for rc in (relationship_changes or []):
+        from_name = (rc.get("from_character_name") or "").strip()
+        to_name = (rc.get("to_character_name") or "").strip()
+        rtype = (rc.get("type") or "").strip()
+        if not from_name or not to_name or not rtype:
+            logger.info(
+                "extractor: skipping relationship_change — empty name/type "
+                "(chapter_id=%s); entry=%r", chapter_id, rc,
+            )
+            continue
+        if from_name == to_name:
+            logger.info(
+                "extractor: skipping relationship_change — self reference "
+                "(name=%r, chapter_id=%s)", from_name, chapter_id,
+            )
+            continue
+        from_char = char_by_name.get(from_name)
+        to_char = char_by_name.get(to_name)
+        if from_char is None or to_char is None:
+            logger.info(
+                "extractor: skipping relationship_change — endpoint not in existing "
+                "(from=%r, to=%r, chapter_id=%s); accept new_character first then re-finalize",
+                from_name, to_name, chapter_id,
+            )
+            continue
+
+        # Strength range clamp + non-numeric tolerance
+        try:
+            strength = max(-1.0, min(1.0, float(rc.get("strength") or 0.0)))
+        except (TypeError, ValueError):
+            logger.info(
+                "extractor: relationship_change strength %r not numeric, defaulting 0.0 "
+                "(chapter_id=%s)", rc.get("strength"), chapter_id,
+            )
+            strength = 0.0
+
+        rows.append(PendingUpdate(
+            project_id=project_id, chapter_id=chapter_id,
+            update_type="soft_fact", operation="create",
+            target_table="relationships", target_id=None,
+            proposed_change={
+                "from_character_id": from_char.id,
+                "from_character_name": from_char.name,
+                "to_character_id": to_char.id,
+                "to_character_name": to_char.name,
+                "type": rtype,
+                "strength": strength,
+                "description": (rc.get("description") or "").strip(),
+                "change_summary": (rc.get("change_summary") or "").strip(),
+                "valid_from_chapter": chapter_id,
+            },
+            reason=(rc.get("reason") or ""),
+            auto=False,
+            extractor_model=model_name,
+            status="pending",
+        ))
+
     return rows
 
 
@@ -306,6 +369,28 @@ def extract_chapter(
         select(LoreEntry).where(LoreEntry.project_id == chapter.project_id)
     ))
 
+    existing_relationships_orm = list(db.scalars(
+        select(Relationship).where(
+            Relationship.project_id == chapter.project_id,
+            Relationship.valid_to_chapter.is_(None),
+        )
+    ))
+    char_id_to_name = {c.id: c.name for c in existing_characters}
+    existing_relationships_view = []
+    for r in existing_relationships_orm:
+        from_name = char_id_to_name.get(r.from_char_id, "")
+        to_name = char_id_to_name.get(r.to_char_id, "")
+        if from_name and to_name:
+            existing_relationships_view.append({
+                "from_char_id": r.from_char_id,
+                "from_name": from_name,
+                "to_char_id": r.to_char_id,
+                "to_name": to_name,
+                "type": r.type,
+                "strength": r.strength,
+                "description": r.description,
+            })
+
     system_prompt = render("extractor/system.j2")
     user_prompt = render(
         "extractor/user.j2",
@@ -313,6 +398,7 @@ def extract_chapter(
         chapter=chapter,
         existing_characters=existing_characters,
         existing_lore=existing_lore,
+        existing_relationships=existing_relationships_view,
     )
 
     request = LLMRequest(
@@ -355,6 +441,7 @@ def extract_chapter(
         existing_lore=existing_lore,
         model_name=model_name,
         state_changes=parsed.get("state_changes") or [],
+        relationship_changes=parsed.get("relationship_changes") or [],
     )
 
     new_hash = hashlib.sha256((chapter.content or "").encode()).hexdigest()
