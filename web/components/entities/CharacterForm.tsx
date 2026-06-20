@@ -8,11 +8,11 @@ import { Chip } from "@/components/ui/Chip";
 import { useToast } from "@/components/ui/Toast";
 import type { Character, CharacterUpdate } from "@/lib/types";
 
-const TEXT_FIELDS: Array<{ key: keyof CharacterUpdate; label: string }> = [
+const TEXT_FIELDS: Array<{ key: keyof CharacterUpdate; label: string; rows?: number }> = [
   { key: "name", label: "姓名" },
   { key: "role", label: "角色" },
   { key: "speech_style", label: "说话风格" },
-  { key: "background", label: "背景" },
+  { key: "background", label: "背景", rows: 4 },
   { key: "motivation", label: "动机" },
   { key: "appearance", label: "外貌" },
   { key: "current_state", label: "当前状态" },
@@ -125,11 +125,20 @@ export function CharacterForm({
       {TEXT_FIELDS.map((f) => (
         <div key={f.key}>
           <label className="text-xs text-text-muted-bright block mb-1">{f.label}</label>
-          <input
-            value={(form[f.key] as string) ?? ""}
-            onChange={(e) => setText(f.key, e.target.value)}
-            className="w-full bg-input border border-line rounded p-2 text-text"
-          />
+          {f.rows ? (
+            <textarea
+              value={(form[f.key] as string) ?? ""}
+              onChange={(e) => setText(f.key, e.target.value)}
+              rows={f.rows}
+              className="w-full bg-input border border-line rounded p-2 text-text"
+            />
+          ) : (
+            <input
+              value={(form[f.key] as string) ?? ""}
+              onChange={(e) => setText(f.key, e.target.value)}
+              className="w-full bg-input border border-line rounded p-2 text-text"
+            />
+          )}
         </div>
       ))}
 
