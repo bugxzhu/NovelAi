@@ -21,4 +21,9 @@
 - [{{ l.type }}] {{ l.name }}：{{ l.description }}
 {% endfor %}
 
-请抽取本章的新实体、描述补充、以及人物状态变化。
+## 已有关系（{{ existing_relationships|length }} 个）
+{% for r in existing_relationships %}
+- {{ r.from_name }} → {{ r.to_name }}：{{ r.type }}（强度 {{ r.strength }}）{% if r.description %} — {{ r.description }}{% endif %}
+{% endfor %}
+
+请抽取本章的新实体、描述补充、人物状态变化、以及人物关系变化。

@@ -47,6 +47,7 @@ def test_render_user_full():
         chapter=_fake_chapter(),
         existing_characters=[_fake_character()],
         existing_lore=[_fake_lore()],
+        existing_relationships=[],
     )
     assert "夜行记" in out
     assert "李雷" in out
@@ -61,11 +62,13 @@ def test_render_user_minimal_no_entities():
         chapter=_fake_chapter(),
         existing_characters=[],
         existing_lore=[],
+        existing_relationships=[],
     )
     assert "夜行记" in out
     # Empty loops should not raise
     assert "已有人物（0" in out
     assert "已有设定（0" in out
+    assert "已有关系（0" in out
 
 
 def test_render_user_missing_var_raises():
@@ -120,6 +123,48 @@ def test_user_prompt_shows_current_state_for_existing_characters():
                  project=_stub_project(),
                  chapter=_stub_chapter(),
                  existing_characters=chars,
-                 existing_lore=[])
+                 existing_lore=[],
+                 existing_relationships=[])
     assert "现状=警惕" in out
     assert "现状=(未记录)" in out  # empty current_state placeholder
+
+
+def test_system_prompt_has_relationship_changes_section():
+    """system.j2 must document relationship_changes extraction rules."""
+    out = render("extractor/system.j2")
+    assert "relationship_changes" in out
+    assert "from_character_name" in out
+    assert "to_character_name" in out
+    assert "strength" in out
+    # Boundary / direction guidance
+    assert "单向" in out or "方向" in out
+
+
+def test_user_prompt_lists_existing_relationships():
+    """user.j2 must render existing_relationships (current-valid only)."""
+    from types import SimpleNamespace
+    chars = [
+        SimpleNamespace(id=1, name="李雷", role="protagonist",
+                        background="bg", motivation="m", appearance="a",
+                        current_state=""),
+        SimpleNamespace(id=2, name="韩梅", role="supporting",
+                        background="bg2", motivation="m2", appearance="a2",
+                        current_state=""),
+    ]
+    existing_rels = [
+        SimpleNamespace(
+            from_char_id=1, from_name="李雷",
+            to_char_id=2, to_name="韩梅",
+            type="旧友", strength=0.5, description="童年同伴",
+        ),
+    ]
+    out = render("extractor/user.j2",
+                 project=SimpleNamespace(title="T", genre="g", premise="p"),
+                 chapter=SimpleNamespace(title="C", content="x", order_index=3),
+                 existing_characters=chars,
+                 existing_lore=[],
+                 existing_relationships=existing_rels)
+    assert "已有关系" in out
+    assert "李雷 → 韩梅" in out
+    assert "旧友" in out
+    assert "0.5" in out
