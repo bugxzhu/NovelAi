@@ -6,6 +6,7 @@ import type { Editor } from "@tiptap/react";
 import type { MarkdownStorage } from "tiptap-markdown";
 import { extensions } from "./extensions";
 import { EditorToolbar } from "./EditorToolbar";
+import { FinalizeButton } from "./FinalizeButton";
 import { useChapterAutosave } from "./useChapterAutosave";
 import type { Chapter } from "@/lib/types";
 
@@ -78,7 +79,13 @@ export function ChapterEditor({
 
   return (
     <div className="flex flex-col h-full">
-      <EditorToolbar editor={editor} title={chapter.title} charCount={charCount} onDelete={onDelete} />
+      <EditorToolbar
+        editor={editor}
+        title={chapter.title}
+        charCount={charCount}
+        onDelete={onDelete}
+        extraActions={<FinalizeButton chapterId={chapter.id} isFinal={chapter.status === "final"} />}
+      />
       <EditorContent editor={editor} className="flex-1 overflow-y-auto" />
     </div>
   );
