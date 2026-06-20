@@ -132,3 +132,30 @@ describe("PendingUpdateItem — character_states", () => {
     expect(screen.queryByText(/新值：/)).toBeNull();
   });
 });
+
+describe("PendingUpdateItem — relationships", () => {
+  const relPending: PendingUpdateRead = {
+    ...basePending,
+    id: 3,
+    update_type: "soft_fact",
+    target_table: "relationships",
+    entity_name: "李雷 → 韩梅",
+    field_name: "",
+    proposed_value: "仇人（强度 -0.8）：决心复仇",
+    reason: "",
+  };
+
+  it("renders relationship card with 🤝 icon and direction", () => {
+    renderWithProviders(<PendingUpdateItem pending={relPending} />);
+    expect(screen.getByText(/🤝/)).toBeTruthy();
+    expect(screen.getByText(/关系变化/)).toBeTruthy();
+    expect(screen.getByText(/李雷 → 韩梅/)).toBeTruthy();
+    expect(screen.getByText(/仇人（强度 -0.8）/)).toBeTruthy();
+  });
+
+  it("does not render 旧值/新值 diff for relationships", () => {
+    renderWithProviders(<PendingUpdateItem pending={relPending} />);
+    expect(screen.queryByText(/新值：/)).toBeNull();
+    expect(screen.queryByText(/旧值：/)).toBeNull();
+  });
+});

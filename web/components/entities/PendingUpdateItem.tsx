@@ -21,6 +21,7 @@ export function PendingUpdateItem({ pending }: { pending: PendingUpdateRead }) {
   const reject = useRejectPendingUpdate();
 
   const isStateChange = pending.target_table === "character_states";
+  const isRelationship = pending.target_table === "relationships";
   const isCharacter = pending.target_table === "characters";
   const isLore = pending.target_table === "lore_entries";
 
@@ -30,6 +31,9 @@ export function PendingUpdateItem({ pending }: { pending: PendingUpdateRead }) {
   if (isStateChange) {
     icon = "📝";
     headerLabel = `状态变化 · ${pending.entity_name}`;
+  } else if (isRelationship) {
+    icon = "🤝";
+    headerLabel = `关系变化 · ${pending.entity_name}`;
   } else {
     const entityLabel = isCharacter ? "人物" : "设定";
     const opLabel = pending.operation === "create" ? "新建" : "更新";
@@ -59,7 +63,7 @@ export function PendingUpdateItem({ pending }: { pending: PendingUpdateRead }) {
       </div>
 
       <div className="text-xs text-text-muted mb-2 pl-6">
-        {isStateChange ? (
+        {isStateChange || isRelationship ? (
           <div>{pending.proposed_value}</div>
         ) : pending.field_name ? (
           <>
