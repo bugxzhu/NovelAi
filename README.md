@@ -70,6 +70,34 @@ alembic current
 
 **测试**：测试用 `tmp_path` + `Base.metadata.create_all()`，不走 Alembic。
 
+## 向量检索（M3b）
+
+M3b 引入了基于 sqlite-vec 的语义检索层。Writer Agent 生成时会自动召回过往章节中与本段情节相关的场景。
+
+### 前置条件
+
+1. `pip install sqlite-vec`（已在 pyproject.toml 中）
+2. `NOVELAI_LLM_PROVIDER=openai`（或兼容端点）—— Anthropic 不提供 embedding API
+3. `.env` 中配置 `EMBEDDING_MODEL`（默认 text-embedding-3-small）
+
+### 配置
+
+```bash
+EMBEDDING_MODEL=text-embedding-3-small     # 模型名
+EMBEDDING_DIMENSIONS=1536                   # 维度（必须和模型一致）
+RETRIEVAL_TOP_K=5                           # 召回数量
+RETRIEVAL_THRESHOLD=0.4                     # cosine 阈值
+```
+
+### 切换 embedding 模型
+
+如果切换 `EMBEDDING_MODEL`（维度变化），需手动清空向量表并重新索引：
+
+```bash
+sqlite3 data/novelai.db "DELETE FROM vec_chunks; DELETE FROM chunk_meta;"
+# 然后重新 finalize 每个章节
+```
+
 ## API 一览
 
 | 资源 | 端点 |

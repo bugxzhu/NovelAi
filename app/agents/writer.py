@@ -79,6 +79,17 @@ def _serialize_context_bundle(bundle: ContextBundle) -> dict:
              "title": s.title, "summary": s.summary}
             for s in bundle.recent_chapter_summaries
         ],
+        "retrieved_chunks": [
+            {
+                "chunk_id": rc.chunk_id,
+                "chapter_id": rc.chapter_id,
+                "chapter_title": rc.chapter_title,
+                "chunk_type": rc.chunk_type,
+                "text": rc.text,
+                "score": round(rc.score, 4),
+            }
+            for rc in bundle.retrieved_chunks
+        ],
     }
 
 
