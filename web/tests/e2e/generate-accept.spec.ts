@@ -60,8 +60,9 @@ test("generate and accept inserts into editor", async ({ page }) => {
   // Submit
   await page.click("button:has-text('✨ 生成')");
 
-  // Wait for done event
-  await expect(page.locator("text=✓ 完成")).toBeVisible({ timeout: 5_000 });
+  // Wait for done event — use a specific selector: StreamView's done status
+  // (FinalizeButton also shows "✓ 完成本章" so plain "text=✓ 完成" is ambiguous)
+  await expect(page.locator("text=/✓ 完成 · 输入/")).toBeVisible({ timeout: 5_000 });
 
   // Accept
   await page.click("button:has-text('✓ 接受并插入')");
