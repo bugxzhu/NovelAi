@@ -16,6 +16,7 @@ from app.api import (
     lore,
     pending_updates,
     projects,
+    relationships,
     world,
 )
 from app.memory.session import init_db
@@ -60,6 +61,8 @@ def create_app() -> FastAPI:
                        tags=["generation_logs"])
     app.include_router(pending_updates.router, prefix="/api/pending-updates",
                        tags=["pending_updates"])
+    app.include_router(relationships.router, prefix="/api/relationships",
+                       tags=["relationships"])
     return app
 
 
