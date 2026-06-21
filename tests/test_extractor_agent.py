@@ -418,7 +418,11 @@ def test_extract_embedding_failure_rolls_back(db_session):
 
 
 def test_extract_batch_split_for_long_chapter(db_session):
-    """Chapter with > 50 paragraphs → embed() called multiple times (batch=50)."""
+    """Chapter with > 10 paragraphs → embed() called multiple times (batch=10).
+
+    Batch size reduced from 50 to 10 in commit c6f2796 (DashScope limit).
+    60 paragraphs / batch=10 → 6 embed() calls.
+    """
     from app.memory.schema import ChunkMeta
 
     # 60 paragraphs
@@ -428,12 +432,12 @@ def test_extract_batch_split_for_long_chapter(db_session):
         "summary": "x",
         "entities": {"new_characters": [], "updated_characters": [], "new_lore": [], "updated_lore": []}
     }))
-    # First batch returns 50 vectors, second batch returns 10.
+    # 6 batches × 10 vectors each (60 paragraphs at batch=10).
     fake_router.embed = MagicMock(
-        side_effect=[[ [0.1] * 1024 ] * 50, [ [0.2] * 1024 ] * 10]
+        side_effect=[[ [0.1] * 1024 ] * 10 for _ in range(6)]
     )
 
     extract_chapter(db_session, chapter_id=ch.id, router=fake_router)
 
-    assert fake_router.embed.call_count == 2
+    assert fake_router.embed.call_count == 6
     assert db_session.query(ChunkMeta).filter_by(chapter_id=ch.id).count() == 60
