@@ -434,3 +434,43 @@ export interface ReviewResponse {
   issues: Issue[];
   log_id: number;
 }
+
+// === M3c-D: Plot Lines ===
+
+export type PlotLineType = "main" | "sub";
+export type PlotLineStatus = "planned" | "active" | "resolved" | "abandoned";
+
+export interface PlotLine {
+  id: number;
+  project_id: number;
+  type: PlotLineType;
+  title: string;
+  summary: string;
+  description: string;
+  status: PlotLineStatus;
+  start_chapter: number | null;
+  end_chapter: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlotLineCreate {
+  project_id: number;
+  type?: PlotLineType;
+  title: string;
+  summary?: string;
+  description?: string;
+  status?: PlotLineStatus;
+  start_chapter?: number | null;
+  end_chapter?: number | null;
+}
+
+export interface PlotLineUpdate {
+  type?: PlotLineType;
+  title?: string;
+  summary?: string;
+  description?: string;
+  status?: PlotLineStatus;
+  start_chapter?: number | null;
+  end_chapter?: number | null;
+}

@@ -10,6 +10,7 @@ import type {
   CharacterState,
   Relationship, RelationshipCreate, RelationshipUpdate, RelationshipHistoryItem,
   Event, EventCreate, EventUpdate, EventFilter,
+  PlotLine, PlotLineCreate, PlotLineUpdate, PlotLineStatus,
   Issue, ReviewResponse,
 } from "./types";
 
@@ -187,4 +188,14 @@ export const api = {
     http<Event>(`/api/events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteEvent: (id: number) =>
     http<void>(`/api/events/${id}`, { method: "DELETE" }),
+
+  // M3c-D: Plot Lines
+  listPlotLines: (projectId: number, status?: PlotLineStatus) =>
+    http<PlotLine[]>(`/api/plot-lines${qs({ project_id: projectId, status })}`),
+  createPlotLine: (data: PlotLineCreate) =>
+    http<PlotLine>("/api/plot-lines", { method: "POST", body: JSON.stringify(data) }),
+  updatePlotLine: (id: number, data: PlotLineUpdate) =>
+    http<PlotLine>(`/api/plot-lines/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deletePlotLine: (id: number) =>
+    http<void>(`/api/plot-lines/${id}`, { method: "DELETE" }),
 };

@@ -15,6 +15,7 @@ import type {
   PendingStatus,
   RelationshipCreate, RelationshipUpdate,
   EventCreate, EventUpdate, EventFilter,
+  PlotLineCreate, PlotLineUpdate, PlotLineStatus,
 } from "./types";
 
 // Projects
@@ -358,5 +359,38 @@ export function useDeleteEvent(projectId: number) {
   return useMutation({
     mutationFn: (id: number) => api.deleteEvent(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["events", projectId] }),
+  });
+}
+
+// === M3c-D: Plot Lines ===
+
+export function usePlotLines(projectId: number, status?: PlotLineStatus) {
+  return useQuery({
+    queryKey: ["plot-lines", projectId, status],
+    queryFn: () => api.listPlotLines(projectId, status),
+  });
+}
+
+export function useCreatePlotLine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PlotLineCreate) => api.createPlotLine(data),
+    onSuccess: (data) => qc.invalidateQueries({ queryKey: ["plot-lines", data.project_id] }),
+  });
+}
+
+export function useUpdatePlotLine(id: number, projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PlotLineUpdate) => api.updatePlotLine(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["plot-lines", projectId] }),
+  });
+}
+
+export function useDeletePlotLine(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deletePlotLine(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["plot-lines", projectId] }),
   });
 }
