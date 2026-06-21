@@ -14,6 +14,7 @@ import type {
   ChapterCreate, ChapterUpdate,
   PendingStatus,
   RelationshipCreate, RelationshipUpdate,
+  EventCreate, EventUpdate, EventFilter,
 } from "./types";
 
 // Projects
@@ -229,6 +230,10 @@ export function useAcceptPendingUpdate() {
         qc.invalidateQueries({ queryKey: ["relationships"] });
         qc.invalidateQueries({ queryKey: ["relationship-history"] });
       }
+      // M3c-C: events target_id is null; invalidate all events caches
+      if (data.target_table === "events") {
+        qc.invalidateQueries({ queryKey: ["events"] });
+      }
     },
   });
 }
@@ -316,5 +321,42 @@ export function useSoftCloseRelationship(projectId: number) {
       qc.invalidateQueries({ queryKey: ["relationships", projectId] });
       qc.invalidateQueries({ queryKey: ["relationship-history"] });
     },
+  });
+}
+
+// === M3c-C: Events ===
+
+export function useEvents(
+  projectId: number,
+  opts?: { chapterId?: number; filter?: EventFilter },
+) {
+  return useQuery({
+    queryKey: ["events", projectId, opts?.chapterId, opts?.filter ?? "all"],
+    queryFn: () => api.listEvents(projectId, opts),
+  });
+}
+
+export function useCreateEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: EventCreate) => api.createEvent(data),
+    onSuccess: (data) =>
+      qc.invalidateQueries({ queryKey: ["events", data.project_id] }),
+  });
+}
+
+export function useUpdateEvent(id: number, projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: EventUpdate) => api.updateEvent(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["events", projectId] }),
+  });
+}
+
+export function useDeleteEvent(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteEvent(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["events", projectId] }),
   });
 }
