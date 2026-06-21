@@ -25,6 +25,10 @@ const SEVERITY_ICON: Record<Severity, string> = {
   info: "🔵",
 };
 
+// Stable empty array so `issues` keeps referential equality when no issues exist,
+// avoiding unnecessary re-renders of consumers.
+const EMPTY_ISSUES: Issue[] = [];
+
 export function ReviewModal({
   chapterId,
   editor,
@@ -32,7 +36,11 @@ export function ReviewModal({
   chapterId: number;
   editor: Editor | null;
 }) {
-  const issues = useReviewStore((s) => s.issuesByChapter[chapterId] || []);
+  // Select the whole map (stable reference unless set/clear fires) and do the
+  // lookup outside the selector. Returning `s.issuesByChapter[id] || []` inline
+  // creates a fresh array each call → "getSnapshot should be cached" infinite loop.
+  const issuesByChapter = useReviewStore((s) => s.issuesByChapter);
+  const issues = issuesByChapter[chapterId] || EMPTY_ISSUES;
   const isOpen = useReviewStore((s) => s.modalOpenFor === chapterId);
   const close = useReviewStore((s) => s.closeModal);
   const toast = useToast();
