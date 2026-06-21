@@ -84,6 +84,44 @@ def test_list_events_filter_unpaid(client):
     assert titles == {"C"}  # C foreshadows B which is unpaid
 
 
+def test_list_events_is_unpaid_field_matches_filter_semantic(client):
+    """is_unpaid field on each EventRead mirrors the ?filter=unpaid decision.
+
+    Bug fix: previously EventList.tsx re-derived a local heuristic that diverged
+    from the backend filter in cycle/multi-target edge cases. Now the backend
+    computes is_unpaid authoritatively; UI just reads the field.
+    """
+    pid, ch = _seed_project_with_chapter(client)
+    # Setup: T (no foreshadows); A foreshadows T (only pointer to T → A is_unpaid=True)
+    # B also foreshadows T (now T has 2 pointers → both A and B are paid since
+    # each has an external foreshadower = the other)
+    t = _create_event(client, pid, ch, title="T")
+    a = _create_event(client, pid, ch, title="A", foreshadows=[t["id"]])
+
+    # After only A foreshadows T: A.is_unpaid should be True
+    r = client.get(f"/api/events?project_id={pid}")
+    by_title = {e["title"]: e for e in r.json()}
+    assert by_title["A"]["is_unpaid"] is True   # T only pointed by A
+    assert by_title["T"]["is_unpaid"] is False  # T has no foreshadows itself
+
+    # Now B also foreshadows T → A.is_unpaid becomes False (external payoff = B)
+    _create_event(client, pid, ch, title="B", foreshadows=[t["id"]])
+    r = client.get(f"/api/events?project_id={pid}")
+    by_title = {e["title"]: e for e in r.json()}
+    assert by_title["A"]["is_unpaid"] is False  # T now has external payoff (B)
+    assert by_title["B"]["is_unpaid"] is False  # T has external payoff (A)
+
+
+def test_get_event_includes_is_unpaid(client):
+    """Single-row endpoint also returns is_unpaid."""
+    pid, ch = _seed_project_with_chapter(client)
+    t = _create_event(client, pid, ch, title="T")
+    a = _create_event(client, pid, ch, title="A", foreshadows=[t["id"]])
+    # Direct GET on A → is_unpaid=True (T only pointed by A)
+    r = client.get(f"/api/events/{a['id']}")
+    assert r.json()["is_unpaid"] is True
+
+
 def test_list_events_filter_paid(client):
     """paid = foreshadows non-empty AND all targets have payoff."""
     pid, ch = _seed_project_with_chapter(client)

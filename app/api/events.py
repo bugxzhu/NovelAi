@@ -61,6 +61,33 @@ def _validate_foreshadows(
         )
 
 
+def _build_project_payoff_index(
+    db: Session, project_id: int
+) -> tuple[dict[int, list[int]], dict[int, str]]:
+    """Build (payoff_map, event_title_by_id) for a project.
+
+    payoff_map: target_event_id → list of event_ids whose foreshadows include target.
+    Used to derive EventRead.payoff_of and EventRead.is_unpaid without N+1 queries.
+    """
+    all_events = list(db.scalars(select(Event).where(Event.project_id == project_id)))
+    payoff_map: dict[int, list[int]] = {}
+    event_title_by_id = {e.id: e.title for e in all_events}
+    for e in all_events:
+        for target_id in (e.foreshadows or []):
+            payoff_map.setdefault(target_id, []).append(e.id)
+    return payoff_map, event_title_by_id
+
+
+def _target_has_external_payoff(
+    payoff_map: dict[int, list[int]], src_id: int, target_id: int
+) -> bool:
+    """Target is referenced by some event OTHER than src itself.
+
+    Matches the ?filter=unpaid semantic: a self-reference doesn't count as "paid".
+    """
+    return any(pid != src_id for pid in payoff_map.get(target_id, []))
+
+
 def _build_response(
     db: Session,
     e: Event,
@@ -75,20 +102,19 @@ def _build_response(
                       if i in char_by_id]
     loc = loc_by_id.get(e.location_id) if e.location_id is not None else None
 
-    if payoff_map is not None and event_title_by_id is not None:
-        payoff_ids = payoff_map.get(e.id, [])
-        payoff_titles = [event_title_by_id.get(pid, "") for pid in payoff_ids]
-    else:
-        payoff_ids = list(db.scalars(
-            select(Event.id).where(
-                text(":eid IN (SELECT value FROM json_each(events.foreshadows))")
-            ).params(eid=e.id)
-        ))
-        payoff_titles = []
-        for pid in payoff_ids:
-            other = db.get(Event, pid)
-            if other:
-                payoff_titles.append(other.title)
+    # Single-row path: compute payoff index for this project on demand.
+    if payoff_map is None or event_title_by_id is None:
+        payoff_map, event_title_by_id = _build_project_payoff_index(db, e.project_id)
+
+    payoff_ids = payoff_map.get(e.id, [])
+    payoff_titles = [event_title_by_id.get(pid, "") for pid in payoff_ids]
+
+    # is_unpaid: True iff any of this event's foreshadows targets has no external payoff.
+    # Mirrors the ?filter=unpaid semantic so the UI doesn't re-derive.
+    is_unpaid = bool(e.foreshadows) and any(
+        not _target_has_external_payoff(payoff_map, e.id, tid)
+        for tid in (e.foreshadows or [])
+    )
 
     return EventRead(
         id=e.id,
@@ -106,6 +132,7 @@ def _build_response(
         foreshadows=e.foreshadows or [],
         payoff_of=payoff_ids,
         payoff_of_titles=payoff_titles,
+        is_unpaid=is_unpaid,
         extractor_log_id=e.extractor_log_id,
         pending_update_id=e.pending_update_id,
         created_at=e.created_at,
@@ -141,29 +168,23 @@ def list_events(
     chapter_by_id = {c.id: c for c in db.scalars(select(Chapter).where(Chapter.id.in_(chapter_ids)))} if chapter_ids else {}
 
     # Build payoff map: target_id → list of event ids that foreshadow it
-    payoff_map: dict[int, list[int]] = {}
-    event_title_by_id = {e.id: e.title for e in all_rows}
-    for e in all_rows:
-        for target_id in (e.foreshadows or []):
-            payoff_map.setdefault(target_id, []).append(e.id)
-
-    def _target_has_external_payoff(src_id: int, target_id: int) -> bool:
-        """Target is referenced by some event OTHER than src itself."""
-        return any(pid != src_id for pid in payoff_map.get(target_id, []))
+    payoff_map, event_title_by_id = _build_project_payoff_index(db, project_id)
 
     # Apply filter BEFORE pagination
     if filter == "unpaid":
         rows = [
             e for e in all_rows
             if e.foreshadows and any(
-                not _target_has_external_payoff(e.id, tid) for tid in e.foreshadows
+                not _target_has_external_payoff(payoff_map, e.id, tid)
+                for tid in e.foreshadows
             )
         ]
     elif filter == "paid":
         rows = [
             e for e in all_rows
             if e.foreshadows and all(
-                _target_has_external_payoff(e.id, tid) for tid in e.foreshadows
+                _target_has_external_payoff(payoff_map, e.id, tid)
+                for tid in e.foreshadows
             )
         ]
     else:

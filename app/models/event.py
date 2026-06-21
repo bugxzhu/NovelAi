@@ -19,6 +19,9 @@ class EventRead(ORMBase, TimestampMixin):
     foreshadows: list[int]      # [event.id, ...] this event foreshadows
     payoff_of: list[int]        # derived: [event.id, ...] that foreshadow this event
     payoff_of_titles: list[str] # derived, UI-friendly (parallel to payoff_of)
+    is_unpaid: bool             # derived: True iff this event's foreshadows include at
+                                # least one target with no external payoff (matches the
+                                # ?filter=unpaid semantic so the UI doesn't re-derive)
     extractor_log_id: int | None
     pending_update_id: int | None
 

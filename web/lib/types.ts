@@ -391,6 +391,7 @@ export interface Event {
   foreshadows: number[];
   payoff_of: number[];
   payoff_of_titles: string[];
+  is_unpaid: boolean;  // backend-derived: matches ?filter=unpaid decision
   extractor_log_id: number | null;
   pending_update_id: number | null;
   created_at: string;

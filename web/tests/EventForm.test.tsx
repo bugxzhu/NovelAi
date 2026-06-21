@@ -53,6 +53,7 @@ describe("EventForm", () => {
       involved_characters: [], involved_character_names: [],
       location_id: null, location_name: "", plot_line_id: null,
       foreshadows: [], payoff_of: [], payoff_of_titles: [],
+      is_unpaid: false,
       extractor_log_id: null, pending_update_id: null,
       created_at: "", updated_at: "",
     };

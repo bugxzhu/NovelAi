@@ -63,22 +63,18 @@ export function EventList({
             <div className="text-xs text-text-dim px-3 py-1">
               第 {order} 章
             </div>
-            {(byChapter.get(order) || []).map((e) => {
-              const isUnpaid =
-                (e.foreshadows?.length ?? 0) > 0 &&
-                (e.payoff_of?.length ?? 0) === 0;
-              return (
-                <button
-                  key={e.id}
-                  onClick={() => onSelect(e.id)}
-                  className={`block w-full text-left px-3 py-2 rounded text-sm ${
-                    selectedId === e.id
-                      ? "bg-active text-white"
-                      : "hover:bg-hover text-text"
-                  }`}
-                >
-                  {isUnpaid && <span className="text-yellow-500">⚠️ </span>}
-                  🎯 {e.title}
+            {(byChapter.get(order) || []).map((e) => (
+              <button
+                key={e.id}
+                onClick={() => onSelect(e.id)}
+                className={`block w-full text-left px-3 py-2 rounded text-sm ${
+                  selectedId === e.id
+                    ? "bg-active text-white"
+                    : "hover:bg-hover text-text"
+                }`}
+              >
+                {e.is_unpaid && <span className="text-yellow-500">⚠️ </span>}
+                🎯 {e.title}
                   {e.involved_character_names.length > 0 && (
                     <span className="text-text-muted">
                       {" "}· {e.involved_character_names.join("、")}
@@ -88,8 +84,7 @@ export function EventList({
                     <span className="text-text-muted"> @{e.location_name}</span>
                   )}
                 </button>
-              );
-            })}
+              ))}
           </div>
         ))
       )}
