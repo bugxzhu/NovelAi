@@ -187,3 +187,181 @@ def assemble_context(
         plot_lines=[],  # M3 fills in
         recent_chapter_summaries=recent_chapter_summaries,
     )
+
+
+@dataclass
+class ReviewContextBundle:
+    """Richer context for review: includes history (state/relationship/events)
+    that writing doesn't need."""
+    project: Project
+    world_overview: WorldOverview | None
+    chapter: Chapter
+    characters: list[Character]
+    character_states_history: dict[int, list[CharacterStateSnapshot]]
+    relationships: list[RelationshipView]
+    events: list[Any]  # list[EventRead]; use Any to avoid circular import
+    lore_entries: list[LoreEntry]
+    recent_chapter_summaries: list[ChapterSummary]
+
+
+def _target_has_external_payoff(
+    payoff_map: dict[int, list[int]], src_id: int, target_id: int
+) -> bool:
+    """Target is referenced by some event OTHER than src itself.
+
+    Mirrors app/api/events.py logic. Duplicated (not imported) to avoid
+    Reviewer depending on events API internals.
+    """
+    return any(pid != src_id for pid in payoff_map.get(target_id, []))
+
+
+def assemble_review_context(
+    db: Session,
+    *,
+    chapter_id: int,
+    state_history_limit: int = 5,
+) -> ReviewContextBundle:
+    """Assemble rich context for chapter review.
+
+    Unlike assemble_context (writing-focused, minimal tokens), this pulls:
+    - last N character_states per character (for arc analysis)
+    - all current relationships (not just involved-pair)
+    - all events with derived payoff_of + is_unpaid (for foreshadow integrity)
+    - all lore entries (for worldview consistency)
+    - all chapter summaries (for plot continuity)
+
+    Raises:
+        ChapterNotFoundError: chapter does not exist.
+    """
+    from app.memory.schema import CharacterState, Event, Relationship
+    from app.models.event import EventRead
+
+    chapter = db.get(Chapter, chapter_id)
+    if chapter is None:
+        raise ChapterNotFoundError(chapter_id)
+    project_id = chapter.project_id
+
+    project = db.get(Project, project_id)
+    world_overview = db.scalar(
+        select(WorldOverview).where(WorldOverview.project_id == project_id)
+    )
+
+    # Resolve involved characters from chapter.last_involved_character_ids
+    involved_ids = chapter.last_involved_character_ids or []
+    if involved_ids:
+        characters = list(db.scalars(
+            select(Character).where(Character.id.in_(involved_ids))
+        ))
+    else:
+        characters = list(db.scalars(
+            select(Character).where(Character.project_id == project_id)
+        ))
+
+    # All project characters (for name resolution in relationships/events)
+    all_chars = list(db.scalars(
+        select(Character).where(Character.project_id == project_id)
+    ))
+    all_char_by_id = {c.id: c for c in all_chars}
+
+    # Per-character state history (last N, newest first)
+    char_states: dict[int, list[CharacterStateSnapshot]] = {}
+    for c in characters:
+        states = list(db.scalars(
+            select(CharacterState)
+            .where(CharacterState.character_id == c.id)
+            .join(Chapter, Chapter.id == CharacterState.chapter_id)
+            .order_by(Chapter.order_index.desc(), CharacterState.id.desc())
+            .limit(state_history_limit)
+        ))
+        char_states[c.id] = [
+            CharacterStateSnapshot(
+                current_state=s.state_snapshot,
+                change_summary=s.change_summary,
+            )
+            for s in states
+        ]
+
+    # All current-valid relationships in project
+    relationships: list[RelationshipView] = []
+    rels = list(db.scalars(
+        select(Relationship).where(
+            Relationship.project_id == project_id,
+            Relationship.valid_to_chapter.is_(None),
+        )
+    ))
+    for r in rels:
+        from_c = all_char_by_id.get(r.from_char_id)
+        to_c = all_char_by_id.get(r.to_char_id)
+        if from_c and to_c:
+            relationships.append(RelationshipView(
+                from_char_id=r.from_char_id, to_char_id=r.to_char_id,
+                from_name=from_c.name, to_name=to_c.name,
+                type=r.type, strength=r.strength, description=r.description,
+            ))
+
+    # All events with derived fields
+    all_events_orm = list(db.scalars(
+        select(Event).where(Event.project_id == project_id)
+    ))
+    payoff_map: dict[int, list[int]] = {}
+    event_title_by_id = {e.id: e.title for e in all_events_orm}
+    for e in all_events_orm:
+        for target_id in (e.foreshadows or []):
+            payoff_map.setdefault(target_id, []).append(e.id)
+
+    chapters_in_project = list(db.scalars(
+        select(Chapter).where(Chapter.project_id == project_id)
+    ))
+    chapter_by_id = {c.id: c for c in chapters_in_project}
+
+    events_view: list[EventRead] = []
+    for e in all_events_orm:
+        ch = chapter_by_id.get(e.chapter_id)
+        involved_names = [
+            all_char_by_id[i].name for i in (e.involved_characters or [])
+            if i in all_char_by_id
+        ]
+        loc = db.get(LoreEntry, e.location_id) if e.location_id else None
+        is_unpaid = bool(e.foreshadows) and any(
+            not _target_has_external_payoff(payoff_map, e.id, tid)
+            for tid in (e.foreshadows or [])
+        )
+        events_view.append(EventRead(
+            id=e.id, project_id=e.project_id, chapter_id=e.chapter_id,
+            chapter_title=ch.title if ch else "",
+            chapter_order=ch.order_index if ch else 0,
+            title=e.title, description=e.description,
+            involved_characters=e.involved_characters or [],
+            involved_character_names=involved_names,
+            location_id=e.location_id,
+            location_name=loc.name if loc else "",
+            plot_line_id=e.plot_line_id,
+            foreshadows=e.foreshadows or [],
+            payoff_of=payoff_map.get(e.id, []),
+            payoff_of_titles=[
+                event_title_by_id.get(pid, "") for pid in payoff_map.get(e.id, [])
+            ],
+            is_unpaid=is_unpaid,
+            extractor_log_id=e.extractor_log_id,
+            pending_update_id=e.pending_update_id,
+            created_at=e.created_at, updated_at=e.updated_at,
+        ))
+
+    # All lore entries
+    lore_entries = list(db.scalars(
+        select(LoreEntry).where(LoreEntry.project_id == project_id)
+    ))
+
+    # All chapter summaries except current
+    recent_chapter_summaries = [
+        ChapterSummary(c.id, c.order_index, c.title, c.summary)
+        for c in chapters_in_project
+        if c.id != chapter_id and c.summary
+    ]
+
+    return ReviewContextBundle(
+        project=project, world_overview=world_overview, chapter=chapter,
+        characters=characters, character_states_history=char_states,
+        relationships=relationships, events=events_view, lore_entries=lore_entries,
+        recent_chapter_summaries=recent_chapter_summaries,
+    )
