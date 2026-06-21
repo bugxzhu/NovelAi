@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import type { Issue } from "./types";
 
 export type ActiveView = "chapters" | "characters" | "lore" | "history" | "search";
 export type GenerationStatus = "idle" | "preparing" | "streaming" | "done" | "error";
@@ -179,4 +180,36 @@ export const useBeatDraftStore = create<BeatDraftStore>((set, get) => ({
     set((s) => ({
       chapters: { ...s.chapters, [id]: { ...DEFAULT_BEAT_DRAFT } },
     })),
+}));
+
+// === M4a: Review ===
+// Issues are NOT persisted (每次启动从头开始). Tied to current session only.
+interface ReviewState {
+  issuesByChapter: Record<number, Issue[]>;
+  modalOpenFor: number | null;
+  setIssues: (chapterId: number, issues: Issue[]) => void;
+  openModal: (chapterId: number) => void;
+  closeModal: () => void;
+  clearIssues: (chapterId: number) => void;
+}
+
+export const useReviewStore = create<ReviewState>((set) => ({
+  issuesByChapter: {},
+  modalOpenFor: null,
+  setIssues: (chapterId, issues) =>
+    set((s) => ({
+      issuesByChapter: { ...s.issuesByChapter, [chapterId]: issues },
+      modalOpenFor: chapterId, // auto-open modal on set
+    })),
+  openModal: (chapterId) => set({ modalOpenFor: chapterId }),
+  closeModal: () => set({ modalOpenFor: null }),
+  clearIssues: (chapterId) =>
+    set((s) => {
+      const next = { ...s.issuesByChapter };
+      delete next[chapterId];
+      return {
+        issuesByChapter: next,
+        modalOpenFor: s.modalOpenFor === chapterId ? null : s.modalOpenFor,
+      };
+    }),
 }));
