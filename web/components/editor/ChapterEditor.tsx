@@ -7,6 +7,8 @@ import type { MarkdownStorage } from "tiptap-markdown";
 import { extensions } from "./extensions";
 import { EditorToolbar } from "./EditorToolbar";
 import { FinalizeButton } from "./FinalizeButton";
+import { ReviewButton } from "./ReviewButton";
+import { ReviewModal } from "./ReviewModal";
 import { useChapterAutosave } from "./useChapterAutosave";
 import type { Chapter } from "@/lib/types";
 
@@ -104,9 +106,15 @@ export function ChapterEditor({
         title={chapter.title}
         charCount={charCount}
         onDelete={onDelete}
-        extraActions={<FinalizeButton chapterId={chapter.id} isFinal={chapter.status === "final"} />}
+        extraActions={
+          <>
+            <FinalizeButton chapterId={chapter.id} isFinal={chapter.status === "final"} />
+            <ReviewButton chapterId={chapter.id} />
+          </>
+        }
       />
       <EditorContent editor={editor} className="flex-1 overflow-y-auto" />
+      <ReviewModal chapterId={chapter.id} editor={editor} />
     </div>
   );
 }
