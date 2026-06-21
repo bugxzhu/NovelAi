@@ -159,3 +159,29 @@ describe("PendingUpdateItem — relationships", () => {
     expect(screen.queryByText(/旧值：/)).toBeNull();
   });
 });
+
+describe("PendingUpdateItem — events", () => {
+  const eventPending: PendingUpdateRead = {
+    ...basePending,
+    id: 4,
+    update_type: "hard_fact",
+    target_table: "events",
+    entity_name: "残月酒馆伏击",
+    field_name: "",
+    proposed_value: "[李雷、韩梅 | @残月酒馆] 韩梅在残月酒馆伏击李雷",
+    reason: "",
+  };
+
+  it("renders event card with 🎯 icon and title", () => {
+    renderWithProviders(<PendingUpdateItem pending={eventPending} />);
+    expect(screen.getByText(/🎯/)).toBeTruthy();
+    expect(screen.getByText(/新事件 · 残月酒馆伏击/)).toBeTruthy();
+    expect(screen.getByText(/韩梅在残月酒馆伏击李雷/)).toBeTruthy();
+  });
+
+  it("does not render 旧值/新值 diff for events", () => {
+    renderWithProviders(<PendingUpdateItem pending={eventPending} />);
+    expect(screen.queryByText(/新值：/)).toBeNull();
+    expect(screen.queryByText(/旧值：/)).toBeNull();
+  });
+});
