@@ -415,3 +415,22 @@ export interface EventUpdate {
   location_id?: number | null;
   foreshadows?: number[];
 }
+
+// === M4a: Reviewer ===
+
+export type Severity = "error" | "warn" | "info";
+export type Category = "character" | "relationship" | "plot" | "foreshadow" | "worldview";
+
+export interface Issue {
+  severity: Severity;
+  category: Category;
+  location: string;
+  description: string;
+  suggestion: string;
+}
+
+export interface ReviewResponse {
+  chapter_id: number;
+  issues: Issue[];
+  log_id: number;
+}
