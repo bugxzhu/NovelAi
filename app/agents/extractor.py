@@ -45,6 +45,7 @@ from app.memory.vectors import delete_chapter_chunks, insert_chunk
 from app.memory.schema import (
     Chapter,
     Character,
+    Event,
     GenerationLog,
     LoreEntry,
     PendingUpdate,
@@ -84,8 +85,9 @@ def _build_pending_rows(
     model_name: str,
     state_changes: list[dict] | None = None,
     relationship_changes: list[dict] | None = None,
+    events: list[dict] | None = None,
 ) -> list[PendingUpdate]:
-    """Convert LLM entities dict + state_changes + relationship_changes to PendingUpdate rows.
+    """Convert LLM entities dict + state_changes + relationship_changes + events to PendingUpdate rows.
 
     Tolerance rules:
         - new_characters / new_lore: empty/duplicate name → skip
@@ -99,6 +101,9 @@ def _build_pending_rows(
           missing change_summary → defaults to ""
         - relationship_changes: from/to not in existing → skip; from==to → skip;
           empty type → skip; strength out of [-1.0, 1.0] → clamped; non-numeric strength → 0.0
+        - events: empty title/description → skip whole entry; unknown involved_character_name →
+          skip that name (event still generated); unknown location_name → location_id=None
+          (event still generated)
     """
     rows: list[PendingUpdate] = []
     char_by_name = {c.name: c for c in existing_characters}
@@ -342,6 +347,70 @@ def _build_pending_rows(
             status="pending",
         ))
 
+    # M3c-C: events → hard_fact pending (target_table='events')
+    # Append-only (no version switch, no upsert). Foreshadow links added by user post-accept.
+    location_by_name = {l.name: l for l in existing_lore if l.type == "location"}
+    for ev in (events or []):
+        title = (ev.get("title") or "").strip()
+        description = (ev.get("description") or "").strip()
+        if not title or not description:
+            logger.info(
+                "extractor: skipping event — empty title/description "
+                "(chapter_id=%s); entry=%r", chapter_id, ev,
+            )
+            continue
+
+        # Resolve involved character names → IDs (tolerate unknown names)
+        involved_ids: list[int] = []
+        involved_names: list[str] = []
+        for name in (ev.get("involved_character_names") or []):
+            n = (name or "").strip()
+            if not n:
+                continue
+            c = char_by_name.get(n)
+            if c is not None:
+                involved_ids.append(c.id)
+                involved_names.append(c.name)
+            else:
+                logger.info(
+                    "extractor: event %r — unknown character %r skipped "
+                    "(chapter_id=%s)", title, n, chapter_id,
+                )
+
+        # UI-friendly names mirror (accept handler ignores these, reads IDs only)
+        # involved_names built above alongside IDs.
+
+        # Resolve location name → ID (tolerate unknown)
+        loc_name = (ev.get("location_name") or "").strip()
+        location_id: int | None = None
+        if loc_name:
+            loc = location_by_name.get(loc_name)
+            if loc is not None:
+                location_id = loc.id
+            else:
+                logger.info(
+                    "extractor: event %r — unknown location %r skipped "
+                    "(chapter_id=%s)", title, loc_name, chapter_id,
+                )
+
+        rows.append(PendingUpdate(
+            project_id=project_id, chapter_id=chapter_id,
+            update_type="hard_fact", operation="create",
+            target_table="events", target_id=None,
+            proposed_change={
+                "title": title,
+                "description": description,
+                "involved_character_ids": involved_ids,
+                "involved_character_names": involved_names,
+                "location_id": location_id,
+                "location_name": loc_name if location_id else "",
+            },
+            reason="",
+            auto=True,  # 硬事实
+            extractor_model=model_name,
+            status="pending",
+        ))
+
     return rows
 
 
@@ -442,6 +511,7 @@ def extract_chapter(
         model_name=model_name,
         state_changes=parsed.get("state_changes") or [],
         relationship_changes=parsed.get("relationship_changes") or [],
+        events=parsed.get("events") or [],
     )
 
     new_hash = hashlib.sha256((chapter.content or "").encode()).hexdigest()
