@@ -148,6 +148,7 @@ def prepare_generation(
         relationships=bundle.relationships,
         faction_lore=bundle.faction_lore,
         location_lore=bundle.location_lore,
+        plot_lines=bundle.plot_lines,
         recent_chapter_summaries=bundle.recent_chapter_summaries,
         beat_text=beat_text,
         instruction=instruction,

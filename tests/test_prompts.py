@@ -61,6 +61,7 @@ def test_render_user_full():
         relationships=[],
         faction_lore=[_fake_lore(name="守夜人", type_="faction")],
         location_lore=[_fake_lore()],
+        plot_lines=[],
         recent_chapter_summaries=[_fake_summary()],
         beat_text="主角遇旧友",
         instruction="氛围压抑",
@@ -84,6 +85,7 @@ def test_render_user_minimal_no_world_no_lore_no_recent():
         relationships=[],
         faction_lore=[],
         location_lore=[],
+        plot_lines=[],
         recent_chapter_summaries=[],
         beat_text="x",
         instruction="",
@@ -110,6 +112,7 @@ def test_render_user_empty_characters_list():
         relationships=[],
         faction_lore=[],
         location_lore=[],
+        plot_lines=[],
         recent_chapter_summaries=[],
         beat_text="x",
         instruction="",
@@ -117,3 +120,26 @@ def test_render_user_empty_characters_list():
     )
     assert "TestNovel" in out
     assert "x" in out
+
+
+def test_render_writer_user_has_plot_lines():
+    """writer/user.j2 renders plot_lines section."""
+    from types import SimpleNamespace
+    pl = SimpleNamespace(type="main", title="复仇之路", summary="在推进")
+    out = render("writer/user.j2",
+                 project=SimpleNamespace(title="T", genre="g", main_theme="m",
+                                         tone="t", premise="p"),
+                 world_overview=None,
+                 characters=[],
+                 character_states={},
+                 relationships=[],
+                 lore_entries=[],
+                 faction_lore=[],
+                 location_lore=[],
+                 plot_lines=[pl],
+                 recent_chapter_summaries=[],
+                 retrieved_chunks=[],
+                 beat_text="x",
+                 instruction="")
+    assert "当前情节线" in out
+    assert "复仇之路" in out

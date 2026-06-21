@@ -172,6 +172,15 @@ def assemble_context(
                     type=r.type, strength=r.strength, description=r.description,
                 ))
 
+    # M3c-D: inject active plot lines
+    from app.memory.schema import PlotLine
+    active_plot_lines = list(db.scalars(
+        select(PlotLine).where(
+            PlotLine.project_id == project_id,
+            PlotLine.status == "active",
+        )
+    ))
+
     return ContextBundle(
         project=project,
         world_overview=world_overview,
@@ -184,7 +193,7 @@ def assemble_context(
         lore_entries=list(location_lore) + list(faction_lore),
         faction_lore=faction_lore,
         location_lore=location_lore,
-        plot_lines=[],  # M3 fills in
+        plot_lines=active_plot_lines,
         recent_chapter_summaries=recent_chapter_summaries,
     )
 
@@ -201,6 +210,7 @@ class ReviewContextBundle:
     relationships: list[RelationshipView]
     events: list[Any]  # list[EventRead]; use Any to avoid circular import
     lore_entries: list[LoreEntry]
+    plot_lines: list[Any]  # M3c-D: list[PlotLine]; use Any to avoid circular import
     recent_chapter_summaries: list[ChapterSummary]
 
 
@@ -352,6 +362,15 @@ def assemble_review_context(
         select(LoreEntry).where(LoreEntry.project_id == project_id)
     ))
 
+    # M3c-D: inject active plot lines
+    from app.memory.schema import PlotLine
+    active_plot_lines = list(db.scalars(
+        select(PlotLine).where(
+            PlotLine.project_id == project_id,
+            PlotLine.status == "active",
+        )
+    ))
+
     # All chapter summaries except current
     recent_chapter_summaries = [
         ChapterSummary(c.id, c.order_index, c.title, c.summary)
@@ -363,5 +382,6 @@ def assemble_review_context(
         project=project, world_overview=world_overview, chapter=chapter,
         characters=characters, character_states_history=char_states,
         relationships=relationships, events=events_view, lore_entries=lore_entries,
+        plot_lines=active_plot_lines,
         recent_chapter_summaries=recent_chapter_summaries,
     )

@@ -174,3 +174,21 @@ def test_assemble_review_context_includes_lore(db_session):
     bundle = assemble_review_context(db_session, chapter_id=ch2.id)
     types = {l.type for l in bundle.lore_entries}
     assert types == {"location", "faction"}
+
+
+def test_assemble_review_context_includes_active_plot_lines(db_session):
+    """assemble_review_context also injects active plot_lines."""
+    from app.memory.retrieval import assemble_review_context
+    from app.memory.schema import PlotLine
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    db_session.add(PlotLine(project_id=p.id, type="main", title="主线",
+                            status="active", summary="在推进"))
+    db_session.commit()
+
+    bundle = assemble_review_context(db_session, chapter_id=ch.id)
+    titles = {pl.title for pl in bundle.plot_lines}
+    assert "主线" in titles

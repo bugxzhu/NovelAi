@@ -37,6 +37,7 @@ def test_render_reviewer_user_minimal():
         relationships=[],
         events=[],
         lore_entries=[],
+        plot_lines=[],
         recent_chapter_summaries=[],
     )
     assert "C3" in out
@@ -79,6 +80,7 @@ def test_render_reviewer_user_full():
         relationships=[rel],
         events=[event],
         lore_entries=[lore],
+        plot_lines=[],
         recent_chapter_summaries=[summary],
     )
     assert "李雷" in out
@@ -87,3 +89,25 @@ def test_render_reviewer_user_full():
     assert "残月酒馆" in out
     assert "摘要" in out
     assert "魔法" in out  # world_overview.power_system
+
+
+def test_render_reviewer_user_has_plot_lines():
+    """reviewer/user.j2 renders plot_lines section."""
+    from types import SimpleNamespace
+    pl = SimpleNamespace(type="main", title="复仇之路", summary="在推进")
+    out = render(
+        "reviewer/user.j2",
+        project=SimpleNamespace(title="T", genre="g", main_theme="m",
+                                tone="t", premise="p"),
+        world_overview=None,
+        chapter=SimpleNamespace(order_index=1, title="C1", content="正文"),
+        characters=[],
+        character_states_history={},
+        relationships=[],
+        events=[],
+        lore_entries=[],
+        plot_lines=[pl],
+        recent_chapter_summaries=[],
+    )
+    assert "当前情节线" in out
+    assert "复仇之路" in out

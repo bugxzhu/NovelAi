@@ -71,6 +71,7 @@ def review_chapter(
         relationships=bundle.relationships,
         events=bundle.events,
         lore_entries=bundle.lore_entries,
+        plot_lines=bundle.plot_lines,
         recent_chapter_summaries=bundle.recent_chapter_summaries,
     )
 

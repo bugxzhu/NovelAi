@@ -32,6 +32,13 @@
 {% endfor %}
 {% endif %}
 
+{% if plot_lines %}
+# 当前情节线
+{% for pl in plot_lines %}
+- [{{ pl.type }}] {{ pl.title }}：{{ pl.summary }}
+{% endfor %}
+{% endif %}
+
 {% if faction_lore or location_lore %}
 # 场景设定
 {% if location_lore %}

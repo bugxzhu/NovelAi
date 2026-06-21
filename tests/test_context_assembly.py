@@ -296,3 +296,47 @@ def test_assemble_excludes_history_relationships(db_session):
         involved_character_ids=[c1.id, c2.id],
     )
     assert bundle.relationships == []
+
+
+def test_assemble_context_includes_active_plot_lines(db_session):
+    """assemble_context injects active plot_lines into ContextBundle."""
+    from app.memory.retrieval import assemble_context
+    from app.memory.schema import Chapter, PlotLine, Project
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    db_session.add(PlotLine(project_id=p.id, type="main", title="主线A",
+                            status="active", summary="进展"))
+    db_session.add(PlotLine(project_id=p.id, type="sub", title="支线B",
+                            status="planned", summary=""))
+    db_session.commit()
+
+    bundle = assemble_context(
+        db_session, chapter_id=ch.id, beat_text="x",
+        involved_character_ids=[],
+    )
+    titles = {pl.title for pl in bundle.plot_lines}
+    assert "主线A" in titles
+    assert "支线B" not in titles  # planned, not active
+
+
+def test_assemble_context_excludes_non_active(db_session):
+    """resolved/abandoned/planned plot_lines not injected."""
+    from app.memory.retrieval import assemble_context
+    from app.memory.schema import Chapter, PlotLine, Project
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    for s in ("planned", "resolved", "abandoned"):
+        db_session.add(PlotLine(project_id=p.id, title=f"PL-{s}", status=s))
+    db_session.commit()
+
+    bundle = assemble_context(
+        db_session, chapter_id=ch.id, beat_text="x",
+        involved_character_ids=[],
+    )
+    assert bundle.plot_lines == []

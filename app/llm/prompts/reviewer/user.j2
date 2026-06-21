@@ -46,6 +46,13 @@
 （无）
 {% endif %}
 
+{% if plot_lines %}
+# 当前情节线
+{% for pl in plot_lines %}
+- [{{ pl.type }}] {{ pl.title }}：{{ pl.summary }}
+{% endfor %}
+{% endif %}
+
 # 章节事件 + 伏笔
 {% if events %}
 {% for e in events %}
