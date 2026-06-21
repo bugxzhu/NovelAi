@@ -11,6 +11,7 @@ import { ReviewButton } from "./ReviewButton";
 import { ReviewModal } from "./ReviewModal";
 import { useChapterAutosave } from "./useChapterAutosave";
 import type { Chapter } from "@/lib/types";
+import { useReviewStore } from "@/lib/store";
 
 // TipTap's `Storage` is a generic record and does not auto-merge per-extension
 // storage, so we cast the `markdown` namespace to the package's own typed shape.
@@ -33,6 +34,19 @@ export function ChapterEditor({
   // to prevent stale pinyin characters from being serialized into Markdown, and to
   // avoid React re-renders disturbing the browser-locked DOM during composition.
   const isComposingRef = useRef(false);
+
+  // Clear review issues + TipTap highlights from the previous chapter when switching
+  // chapters. Without this, highlight marks from chapter A would still be rendered
+  // after the editor reloads content for chapter B.
+  const clearIssues = useReviewStore((s) => s.clearIssues);
+  const prevChapterIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevChapterIdRef.current;
+    if (prev !== null && prev !== chapter.id) {
+      clearIssues(prev);
+    }
+    prevChapterIdRef.current = chapter.id;
+  }, [chapter.id, clearIssues]);
 
   const editor = useEditor({
     extensions,
