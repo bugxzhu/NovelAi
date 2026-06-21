@@ -10,6 +10,7 @@ from app.api import (
     characters,
     characters_states,
     deps,
+    events,
     generation_logs,
     health,
     llm,
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
                        tags=["pending_updates"])
     app.include_router(relationships.router, prefix="/api/relationships",
                        tags=["relationships"])
+    app.include_router(events.router, prefix="/api/events", tags=["events"])
     return app
 
 
