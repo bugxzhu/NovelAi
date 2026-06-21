@@ -183,6 +183,7 @@ export interface ChapterUpdate {
   content?: string;
   status?: string;
   summary?: string;
+  plot_line_ids?: number[];
   last_involved_character_ids?: number[];
   last_location_id?: number | null;
 }
@@ -405,6 +406,7 @@ export interface EventCreate {
   description: string;
   involved_characters?: number[];
   location_id?: number | null;
+  plot_line_id?: number | null;
   foreshadows?: number[];
 }
 
@@ -413,6 +415,7 @@ export interface EventUpdate {
   description?: string;
   involved_characters?: number[];
   location_id?: number | null;
+  plot_line_id?: number | null;
   foreshadows?: number[];
 }
 

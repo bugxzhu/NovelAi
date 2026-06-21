@@ -10,6 +10,9 @@ import { FinalizeButton } from "./FinalizeButton";
 import { ReviewButton } from "./ReviewButton";
 import { ReviewModal } from "./ReviewModal";
 import { useChapterAutosave } from "./useChapterAutosave";
+import { usePlotLines } from "@/lib/queries";
+import { useUpdateChapter } from "@/lib/queries";
+import { Chip } from "@/components/ui/Chip";
 import type { Chapter } from "@/lib/types";
 import { useReviewStore } from "@/lib/store";
 
@@ -30,6 +33,8 @@ export function ChapterEditor({
   onDelete?: () => void;
 }) {
   const autosave = useChapterAutosave(chapter.id, chapter.project_id);
+  const { data: plotLines = [] } = usePlotLines(chapter.project_id);
+  const updateChapter = useUpdateChapter(chapter.id, chapter.project_id);
   // IME (中文输入法) composition state — skip onUpdate while user is mid-composition
   // to prevent stale pinyin characters from being serialized into Markdown, and to
   // avoid React re-renders disturbing the browser-locked DOM during composition.
@@ -128,6 +133,31 @@ export function ChapterEditor({
         }
       />
       <EditorContent editor={editor} className="flex-1 overflow-y-auto" />
+      {plotLines.length > 0 && (
+        <div className="border-t border-line p-3 bg-panel">
+          <label className="text-xs text-text-muted-bright block mb-1">情节线</label>
+          <div className="flex flex-wrap gap-1">
+            {plotLines.map((pl) => {
+              const selected = (chapter.plot_line_ids || []).includes(pl.id);
+              return (
+                <Chip
+                  key={pl.id}
+                  selected={selected}
+                  onClick={() => {
+                    const current = chapter.plot_line_ids || [];
+                    const next = current.includes(pl.id)
+                      ? current.filter((id) => id !== pl.id)
+                      : [...current, pl.id];
+                    updateChapter.mutate({ plot_line_ids: next });
+                  }}
+                >
+                  {pl.title}
+                </Chip>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <ReviewModal chapterId={chapter.id} editor={editor} />
     </div>
   );

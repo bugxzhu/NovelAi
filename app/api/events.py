@@ -236,6 +236,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
         description=payload.description,
         involved_characters=payload.involved_characters,
         location_id=payload.location_id,
+        plot_line_id=payload.plot_line_id,
         foreshadows=payload.foreshadows,
     )
     db.add(e)
@@ -271,6 +272,8 @@ def update_event(
     if "location_id" in data:
         _validate_location(db, data["location_id"])
         e.location_id = data["location_id"]
+    if "plot_line_id" in data:
+        e.plot_line_id = data["plot_line_id"]
     if "foreshadows" in data:
         _validate_foreshadows(db, e.project_id, data["foreshadows"], self_id=e.id)
         e.foreshadows = data["foreshadows"]

@@ -6,6 +6,7 @@ import {
   useCharacters,
   useCreateEvent,
   useLore,
+  usePlotLines,
   useUpdateEvent,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +26,7 @@ export function EventForm({
   const { data: characters = [] } = useCharacters(projectId);
   const { data: lore = [] } = useLore(projectId);
   const { data: chapters = [] } = useChapters(projectId);
+  const { data: plotLines = [] } = usePlotLines(projectId);
   const locations = lore.filter((l) => l.type === "location");
   const create = useCreateEvent();
   const update = useUpdateEvent(event?.id ?? 0, projectId);
@@ -36,6 +38,7 @@ export function EventForm({
   const [description, setDescription] = useState(event?.description ?? "");
   const [involved, setInvolved] = useState<number[]>(event?.involved_characters ?? []);
   const [locationId, setLocationId] = useState<number | "">(event?.location_id ?? "");
+  const [plotLineId, setPlotLineId] = useState<number | "">(event?.plot_line_id ?? "");
   const [chapterIdState, setChapterIdState] = useState<number>(
     event?.chapter_id ?? chapterId ?? (chapters[0]?.id ?? 0)
   );
@@ -46,6 +49,7 @@ export function EventForm({
       setDescription(event.description);
       setInvolved(event.involved_characters || []);
       setLocationId(event.location_id ?? "");
+      setPlotLineId(event.plot_line_id ?? "");
       setChapterIdState(event.chapter_id);
     }
   }, [event?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -71,6 +75,7 @@ export function EventForm({
           title, description,
           involved_characters: involved,
           location_id: locationId === "" ? null : locationId,
+          plot_line_id: plotLineId === "" ? null : plotLineId,
         });
         toast("已保存", "success");
       } else {
@@ -80,6 +85,7 @@ export function EventForm({
           title, description,
           involved_characters: involved,
           location_id: locationId === "" ? null : locationId,
+          plot_line_id: plotLineId === "" ? null : plotLineId,
         });
         toast("已新建", "success");
       }
@@ -162,6 +168,25 @@ export function EventForm({
           <option value="">（无）</option>
           {locations.map((l) => (
             <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="text-xs text-text-muted-bright block mb-1">情节线</label>
+        <select
+          aria-label="情节线"
+          value={plotLineId}
+          onChange={(e) =>
+            setPlotLineId(e.target.value === "" ? "" : Number(e.target.value))
+          }
+          className="w-full bg-input border border-line rounded p-2 text-text"
+        >
+          <option value="">（未归属）</option>
+          {plotLines.map((pl) => (
+            <option key={pl.id} value={pl.id}>
+              {pl.type === "main" ? "主线" : "支线"} · {pl.title}
+            </option>
           ))}
         </select>
       </div>

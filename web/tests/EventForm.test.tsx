@@ -8,6 +8,7 @@ vi.mock("@/lib/queries", () => ({
   useCharacters: () => ({ data: MOCK_CHARS }),
   useLore: () => ({ data: MOCK_LORE }),
   useChapters: () => ({ data: MOCK_CHAPTERS }),
+  usePlotLines: () => ({ data: [] }),
   useCreateEvent: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
   useUpdateEvent: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
 }));

@@ -33,14 +33,16 @@ class EventCreate(BaseModel):
     description: str
     involved_characters: list[int] = []
     location_id: int | None = None
+    plot_line_id: int | None = None
     foreshadows: list[int] = []
 
 
 class EventUpdate(BaseModel):
     # Only these fields are mutable. chapter_id / project_id are NOT
-    # (event归属固定). plot_line_id reserved for M3c-D.
+    # (event归属固定).
     title: str | None = None
     description: str | None = None
     involved_characters: list[int] | None = None
     location_id: int | None = None
+    plot_line_id: int | None = None
     foreshadows: list[int] | None = None
