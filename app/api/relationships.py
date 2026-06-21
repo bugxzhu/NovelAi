@@ -22,9 +22,19 @@ def _clamp_strength(v: float) -> float:
     return max(-1.0, min(1.0, float(v)))
 
 
-def _to_read(r: Relationship, db: Session) -> RelationshipRead:
-    from_c = db.get(Character, r.from_char_id)
-    to_c = db.get(Character, r.to_char_id)
+def _to_read(
+    r: Relationship,
+    db: Session | None = None,
+    char_by_id: dict[int, Character] | None = None,
+) -> RelationshipRead:
+    """Build RelationshipRead. Either pass char_by_id (pre-fetched dict, no N+1)
+    or db (will db.get per call — use only for single-row endpoints)."""
+    if char_by_id is not None:
+        from_c = char_by_id.get(r.from_char_id)
+        to_c = char_by_id.get(r.to_char_id)
+    else:
+        from_c = db.get(Character, r.from_char_id) if db else None
+        to_c = db.get(Character, r.to_char_id) if db else None
     return RelationshipRead(
         id=r.id,
         project_id=r.project_id,
@@ -59,7 +69,13 @@ def list_relationships(
     stmt = stmt.order_by(Relationship.from_char_id, Relationship.to_char_id)
     stmt = stmt.limit(limit).offset(offset)
     rows = list(db.scalars(stmt))
-    return [_to_read(r, db) for r in rows]
+
+    # Pre-fetch all characters for this project once (avoids N+1 in _to_read).
+    project_chars = list(db.scalars(
+        select(Character).where(Character.project_id == project_id)
+    ))
+    char_by_id = {c.id: c for c in project_chars}
+    return [_to_read(r, char_by_id=char_by_id) for r in rows]
 
 
 @router.get("/history", response_model=list[RelationshipHistoryItem])
