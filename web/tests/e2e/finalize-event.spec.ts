@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type { Event } from "@/lib/types";
 
 test("finalize event → accept → see in events list → can open foreshadow panel", async ({ page, request }) => {
   const base = "http://127.0.0.1:8005";
@@ -74,7 +75,7 @@ test("finalize event → accept → see in events list → can open foreshadow p
 
   // 5. Mock events list with 2 events (one accepted + one for foreshadow target).
   // Stateful: after PATCH adds a foreshadow link, subsequent GET reflects the change.
-  const event1 = {
+  const event1: Event = {
     id: 1, project_id: pid, chapter_id: chId,
     chapter_title: "残月重逢", chapter_order: 1,
     title: "残月酒馆重逢", description: "李雷与韩梅在残月酒馆重逢",
@@ -86,7 +87,7 @@ test("finalize event → accept → see in events list → can open foreshadow p
     created_at: "2026-06-21T10:01:00Z",
     updated_at: "2026-06-21T10:01:00Z",
   };
-  const event2 = {
+  const event2: Event = {
     id: 2, project_id: pid, chapter_id: chId,
     chapter_title: "残月重逢", chapter_order: 1,
     title: "真相揭露", description: "韩梅的真实身份暴露",
