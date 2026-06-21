@@ -17,6 +17,7 @@ from app.api import (
     llm,
     lore,
     pending_updates,
+    plot_lines,
     projects,
     relationships,
     world,
@@ -65,6 +66,8 @@ def create_app() -> FastAPI:
                        tags=["generation_logs"])
     app.include_router(pending_updates.router, prefix="/api/pending-updates",
                        tags=["pending_updates"])
+    app.include_router(plot_lines.router, prefix="/api/plot-lines",
+                       tags=["plot_lines"])
     app.include_router(relationships.router, prefix="/api/relationships",
                        tags=["relationships"])
     app.include_router(events.router, prefix="/api/events", tags=["events"])
