@@ -176,7 +176,10 @@ class PendingUpdate(Base):
     proposed_change: Mapped[dict] = mapped_column(JSON, default=dict)
     reason: Mapped[str] = mapped_column(Text, default="")
 
-    # auto=True: proposed by Extractor Agent; auto=False: user-suggested in review UI (M3c+)
+    # auto=True: hard_fact (high confidence; visually distinct in pending UI; user may still reject)
+    # auto=False: soft_fact (lower confidence; needs explicit user accept)
+    # All Extractor-proposed pendings set this flag per their fact type:
+    # new_characters/new_lore/events → True; state_changes/relationship_changes → False.
     auto: Mapped[bool] = mapped_column(default=True)
     extractor_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     extractor_log_id: Mapped[int | None] = mapped_column(
