@@ -1,0 +1,79 @@
+# 项目背景
+标题：{{ project.title }}
+类型：{{ project.genre }}
+主题：{{ project.main_theme }}
+基调：{{ project.tone }}
+核心设定：{{ project.premise }}
+
+{% if world_overview %}
+# 世界观
+- 时代：{{ world_overview.setting_era }}
+- 力量体系：{{ world_overview.power_system }}
+- 规则与禁忌：{{ world_overview.rules_and_taboos }}
+- 地理：{{ world_overview.geography_summary }}
+- 文化：{{ world_overview.culture_summary }}
+{% endif %}
+
+# 待审章节
+标题：第 {{ chapter.order_index }} 章 · {{ chapter.title }}
+
+正文：
+---
+{{ chapter.content }}
+---
+
+# 涉及人物档案 + 状态轨迹
+{% for c in characters %}
+## {{ c.name }}（{{ c.role }}）
+- 性格：{{ c.personality | tojson }}
+- 说话风格：{{ c.speech_style }}
+- 动机：{{ c.motivation }}
+- 背景：{{ c.background }}
+- 状态轨迹（最近 {{ character_states_history[c.id] | length }} 条，最新在前）：
+{% for s in character_states_history[c.id] %}
+  - {{ s.current_state }}{% if s.change_summary %}（{{ s.change_summary }}）{% endif %}
+{% endfor %}
+{% else %}
+（无涉及人物档案）
+{% endfor %}
+
+# 当前人物关系
+{% if relationships %}
+{% for r in relationships %}
+- {{ r.from_name }} → {{ r.to_name }}：{{ r.type }}（强度 {{ r.strength }}）{% if r.description %} — {{ r.description }}{% endif %}
+{% endfor %}
+{% else %}
+（无）
+{% endif %}
+
+# 章节事件 + 伏笔
+{% if events %}
+{% for e in events %}
+- 第 {{ e.chapter_order }} 章 · {{ e.title }}：{{ e.description }}
+{% if e.foreshadows %}埋伏笔指向：{% for fid in e.foreshadows %}#{{ fid }} {% endfor %}{% endif %}
+{% if e.payoff_of %}兑现了：{% for pid in e.payoff_of_titles %}{{ pid }}、{% endfor %}{% endif %}
+{% if e.is_unpaid %}⚠️ 此事件含未兑现伏笔{% endif %}
+{% endfor %}
+{% else %}
+（无）
+{% endif %}
+
+# 世界观设定（lore）
+{% if lore_entries %}
+{% for l in lore_entries %}
+- [{{ l.type }}] {{ l.name }}：{{ l.description }}
+{% endfor %}
+{% else %}
+（无）
+{% endif %}
+
+# 前情提要
+{% if recent_chapter_summaries %}
+{% for s in recent_chapter_summaries %}
+- 第 {{ s.order_index }} 章 {{ s.title }}：{{ s.summary }}
+{% endfor %}
+{% else %}
+（无前章）
+{% endif %}
+
+请按 5 维度审查本章并输出 issues_by_category。
