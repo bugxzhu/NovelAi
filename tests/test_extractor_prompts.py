@@ -168,3 +168,14 @@ def test_user_prompt_lists_existing_relationships():
     assert "李雷 → 韩梅" in out
     assert "旧友" in out
     assert "0.5" in out
+
+
+def test_system_prompt_has_events_section():
+    """system.j2 must document events extraction rules."""
+    out = render("extractor/system.j2")
+    assert "events" in out
+    assert "involved_character_names" in out
+    assert "location_name" in out
+    assert "title" in out
+    # Guidance about not auto-marking foreshadows
+    assert "foreshadows" in out
