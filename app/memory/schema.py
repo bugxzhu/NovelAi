@@ -297,3 +297,38 @@ class Relationship(Base):
             sqlite_where=text("valid_to_chapter IS NULL"),
         ),
     )
+
+
+class Event(Base):
+    """Significant events that occur in chapters, with cross-chapter foreshadow
+    links. M3c-C: append-only (no version switch, no upsert); foreshadows is a
+    single-direction JSON array of event IDs; payoff_of is derived (not stored)."""
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
+
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+
+    involved_characters: Mapped[list] = mapped_column(JSON, default=list)
+    location_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    plot_line_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    foreshadows: Mapped[list] = mapped_column(JSON, default=list)
+
+    extractor_log_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pending_update_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+    __table_args__ = (
+        Index("idx_events_project", "project_id", "chapter_id"),
+        Index("idx_events_chapter", "chapter_id"),
+    )
