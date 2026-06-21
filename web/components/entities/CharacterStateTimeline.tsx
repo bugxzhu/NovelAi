@@ -16,7 +16,9 @@ function formatTime(iso: string): string {
 
 export function CharacterStateTimeline({ characterId }: { characterId: number | null }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: states = [], isLoading } = useCharacterStates(characterId);
+  const { data: states = [], isLoading } = useCharacterStates(characterId, {
+    order: "asc",  // story progression: earliest chapter first
+  });
   const count = states.length;
 
   if (characterId === null) {

@@ -247,10 +247,13 @@ export function useRejectPendingUpdate() {
 
 // === M3c-B: Character States ===
 
-export function useCharacterStates(characterId: number | null) {
+export function useCharacterStates(
+  characterId: number | null,
+  opts?: { order?: "desc" | "asc"; limit?: number },
+) {
   return useQuery({
-    queryKey: ["character-states", characterId],
-    queryFn: () => api.listCharacterStates(characterId!),
+    queryKey: ["character-states", characterId, opts?.order ?? "desc", opts?.limit],
+    queryFn: () => api.listCharacterStates(characterId!, opts),
     enabled: characterId != null,
   });
 }

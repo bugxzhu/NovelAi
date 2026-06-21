@@ -183,7 +183,9 @@ def accept_pending(pending_id: int, db: Session = Depends(get_db)):
                     description=data.get("description", ""),
                 ))
             elif p.target_table == "character_states":
-                # M3c-B: INSERT temporal row + mirror to characters.current_state
+                # M3c-B: upsert temporal row + mirror to characters.current_state.
+                # One state per (character, chapter) — re-extract + re-accept updates
+                # in place rather than appending a duplicate. See bug fix 2026-06-21.
                 char_id = data.get("character_id")
                 if char_id is None:
                     raise HTTPException(
@@ -194,18 +196,29 @@ def accept_pending(pending_id: int, db: Session = Depends(get_db)):
                 if char is None:
                     raise HTTPException(
                         status_code=500, detail="target character gone")
-                state = CharacterState(
-                    character_id=char_id,
-                    chapter_id=p.chapter_id,
-                    state_snapshot=data.get("state_snapshot", ""),
-                    change_summary=data.get("change_summary", ""),
-                    extractor_log_id=p.extractor_log_id,
-                    pending_update_id=p.id,
-                )
-                db.add(state)
-                db.flush()  # get state.id for audit
+                snapshot = data.get("state_snapshot", "")
+                existing = db.scalar(select(CharacterState).where(
+                    CharacterState.character_id == char_id,
+                    CharacterState.chapter_id == p.chapter_id,
+                ))
+                if existing is None:
+                    state = CharacterState(
+                        character_id=char_id,
+                        chapter_id=p.chapter_id,
+                        state_snapshot=snapshot,
+                        change_summary=data.get("change_summary", ""),
+                        extractor_log_id=p.extractor_log_id,
+                        pending_update_id=p.id,
+                    )
+                    db.add(state)
+                    db.flush()  # get state.id for audit
+                else:
+                    existing.state_snapshot = snapshot
+                    existing.change_summary = data.get("change_summary", "")
+                    existing.extractor_log_id = p.extractor_log_id
+                    existing.pending_update_id = p.id
                 # Mirror strategy B: characters.current_state = latest snapshot
-                char.current_state = data.get("state_snapshot", "")
+                char.current_state = snapshot
             elif p.target_table == "relationships":
                 # M3c-A: version-switch semantics
                 data = p.proposed_change or {}

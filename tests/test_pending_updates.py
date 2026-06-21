@@ -283,6 +283,72 @@ def test_accept_character_state_target_gone_returns_500(client, fake_router):
     assert r.status_code == 500
 
 
+def test_accept_character_state_upsert_on_re_extract(client, fake_router):
+    """Re-extract + re-accept same (character, chapter) → UPDATE existing row, not INSERT duplicate.
+
+    Bug: M3c-B accept handler unconditionally INSERTed. Re-finalize + re-accept produced
+    multiple character_states rows for the same (character_id, chapter_id). User expectation:
+    one state per (character, chapter); re-extract updates in place.
+    """
+    from app.memory import session as sm
+    from app.memory.schema import CharacterState
+
+    def _state_response(snapshot: str, change: str) -> None:
+        fake_router.complete = MagicMock(return_value=LLMResponse(
+            text=json.dumps({
+                "summary": "x",
+                "entities": {"new_characters": [], "updated_characters": [],
+                             "new_lore": [], "updated_lore": []},
+                "state_changes": [
+                    {"character_name": "李雷",
+                     "state_snapshot": snapshot, "change_summary": change}
+                ],
+            }),
+            input_tokens=1, output_tokens=1, stop_reason="end_turn",
+        ))
+
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    cid = client.post("/api/characters", json={
+        "project_id": pid, "name": "李雷",
+    }).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 5, "title": "C5", "content": "x",
+    }).json()["id"]
+
+    # First finalize + accept → INSERT
+    _state_response("愤怒", "被伏击")
+    client.post(f"/api/chapters/{ch}/finalize")
+    p1 = next(p for p in client.get(f"/api/pending-updates?project_id={pid}").json()
+              if p["target_table"] == "character_states")
+    client.post(f"/api/pending-updates/{p1['id']}/accept")
+
+    # Re-extract with different snapshot → accept again
+    _state_response("决绝", "立誓复仇")
+    client.post(f"/api/chapters/{ch}/finalize")
+    p2 = next(p for p in client.get(f"/api/pending-updates?project_id={pid}").json()
+              if p["target_table"] == "character_states" and p["status"] == "pending")
+    r = client.post(f"/api/pending-updates/{p2['id']}/accept")
+    assert r.status_code == 200
+
+    # Verify: only ONE character_states row for (cid, ch); content is the latest accept
+    with sm.SessionLocal() as s:
+        rows = list(s.query(CharacterState).filter(
+            CharacterState.character_id == cid,
+            CharacterState.chapter_id == ch,
+        ))
+    assert len(rows) == 1, f"expected upsert, got {len(rows)} rows"
+    assert rows[0].state_snapshot == "决绝"
+    assert rows[0].change_summary == "立誓复仇"
+    assert rows[0].pending_update_id == p2["id"]
+    assert rows[0].extractor_log_id is not None
+
+    # Mirror still holds: current_state = latest snapshot
+    char = client.get(f"/api/characters/{cid}").json()
+    assert char["current_state"] == "决绝"
+
+
 def test_reject_character_state_no_db_change(client, fake_router):
     """Reject → no character_states row, no current_state change."""
     fake_router.complete = MagicMock(return_value=LLMResponse(
