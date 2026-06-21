@@ -8,6 +8,7 @@ const ITEMS = [
   { icon: "📚", label: "章节", path: "chapters", view: "chapters" as const },
   { icon: "👥", label: "人物", path: "characters", view: "characters" as const },
   { icon: "🤝", label: "关系", path: "relationships", view: "relationships" as const },
+  { icon: "🎯", label: "事件", path: "events", view: "events" as const },
   { icon: "🌍", label: "设定", path: "lore", view: "lore" as const },
   { icon: "📜", label: "历史", path: "history", view: "history" as const },
   { icon: "📋", label: "待处理", path: "pending", view: "pending" as const },
