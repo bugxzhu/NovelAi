@@ -335,3 +335,31 @@ class Event(Base):
         Index("idx_events_project", "project_id", "chapter_id"),
         Index("idx_events_chapter", "chapter_id"),
     )
+
+
+class PlotLine(Base):
+    """Main or subplot line with status lifecycle. M3c-D: manually managed
+    (no extraction, no version-switch). Active plot_lines are injected into
+    Writer + Reviewer context."""
+    __tablename__ = "plot_lines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+
+    type: Mapped[str] = mapped_column(Text, nullable=False, default="sub")
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="planned")
+
+    start_chapter: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_chapter: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+    __table_args__ = (
+        Index("idx_plot_lines_project", "project_id", "status"),
+    )
