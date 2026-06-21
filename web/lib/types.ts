@@ -274,7 +274,7 @@ export interface PendingUpdateRead {
   chapter_id: number;
   update_type: string;
   operation: "create" | "update";
-  target_table: "characters" | "lore_entries" | "character_states" | "relationships";
+  target_table: "characters" | "lore_entries" | "character_states" | "relationships" | "events";
   target_id: number | null;
   reason: string;
   status: "pending" | "accepted" | "rejected";
@@ -369,4 +369,48 @@ export interface RelationshipHistoryItem {
   description: string;
   change_summary: string;
   created_at: string;
+}
+
+// === M3c-C: Events ===
+
+export type EventFilter = "all" | "unpaid" | "paid";
+
+export interface Event {
+  id: number;
+  project_id: number;
+  chapter_id: number;
+  chapter_title: string;
+  chapter_order: number;
+  title: string;
+  description: string;
+  involved_characters: number[];
+  involved_character_names: string[];
+  location_id: number | null;
+  location_name: string;
+  plot_line_id: number | null;
+  foreshadows: number[];
+  payoff_of: number[];
+  payoff_of_titles: string[];
+  extractor_log_id: number | null;
+  pending_update_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventCreate {
+  project_id: number;
+  chapter_id: number;
+  title: string;
+  description: string;
+  involved_characters?: number[];
+  location_id?: number | null;
+  foreshadows?: number[];
+}
+
+export interface EventUpdate {
+  title?: string;
+  description?: string;
+  involved_characters?: number[];
+  location_id?: number | null;
+  foreshadows?: number[];
 }

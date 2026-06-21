@@ -9,6 +9,7 @@ import type {
   FinalizeResponse, PendingStatus,
   CharacterState,
   Relationship, RelationshipCreate, RelationshipUpdate, RelationshipHistoryItem,
+  Event, EventCreate, EventUpdate, EventFilter,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -164,4 +165,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ valid_to_chapter: validToChapter }),
     }),
+
+  // M3c-C: Events
+  listEvents: (projectId: number, opts?: { chapterId?: number; filter?: EventFilter }) =>
+    http<Event[]>(
+      `/api/events${qs({
+        project_id: projectId,
+        chapter_id: opts?.chapterId,
+        filter: opts?.filter ?? "all",
+      } as Record<string, unknown>)}`,
+    ),
+  getEvent: (id: number) => http<Event>(`/api/events/${id}`),
+  createEvent: (data: EventCreate) =>
+    http<Event>("/api/events", { method: "POST", body: JSON.stringify(data) }),
+  updateEvent: (id: number, data: EventUpdate) =>
+    http<Event>(`/api/events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteEvent: (id: number) =>
+    http<void>(`/api/events/${id}`, { method: "DELETE" }),
 };
