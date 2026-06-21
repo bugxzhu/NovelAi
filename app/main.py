@@ -7,6 +7,7 @@ from app.api import (
     chapters,
     chapters_finalize,
     chapters_generate,
+    chapters_review,
     characters,
     characters_states,
     deps,
@@ -57,6 +58,8 @@ def create_app() -> FastAPI:
                        tags=["chapters_generate"])
     app.include_router(chapters_finalize.router, prefix="/api/chapters",
                        tags=["chapters_finalize"])
+    app.include_router(chapters_review.router, prefix="/api/chapters",
+                       tags=["chapters_review"])
     app.include_router(llm.router, prefix="/api/llm", tags=["llm"])
     app.include_router(generation_logs.router, prefix="/api/generation-logs",
                        tags=["generation_logs"])
