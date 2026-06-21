@@ -9,6 +9,7 @@ from app.memory.schema import (
     Chapter,
     Character,
     CharacterState,
+    Event,
     LoreEntry,
     PendingUpdate,
     Relationship,
@@ -59,6 +60,21 @@ def _derive_summary_fields(proposed_change: dict, target_table: str) -> dict:
             f"{rtype}（强度 {strength}）：{desc}" if desc
             else f"{rtype}（强度 {strength}）"
         )
+    elif target_table == "events":
+        entity_type = ""
+        entity_name = proposed_change.get("title", "")
+        field_name = ""
+        old_value = ""
+        desc = proposed_change.get("description", "")
+        names = proposed_change.get("involved_character_names") or []
+        loc = proposed_change.get("location_name") or ""
+        prefix_parts = []
+        if names:
+            prefix_parts.append("、".join(names))
+        if loc:
+            prefix_parts.append(f"@{loc}")
+        prefix = f"[{' | '.join(prefix_parts)}] " if prefix_parts else ""
+        proposed_value = f"{prefix}{desc}"
     else:
         entity_type = ""
         entity_name = ""
@@ -262,6 +278,43 @@ def accept_pending(pending_id: int, db: Session = Depends(get_db)):
                     pending_update_id=p.id,
                 )
                 db.add(rel)
+            elif p.target_table == "events":
+                # M3c-C: append-only event (no version switch, no upsert)
+                data = p.proposed_change or {}
+                title = data.get("title", "")
+                description = data.get("description", "")
+                if not title or not description:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="events pending missing title/description",
+                    )
+
+                # Validate location_id (if specified) — must exist and be type=location
+                location_id = data.get("location_id")
+                if location_id is not None:
+                    loc = db.get(LoreEntry, location_id)
+                    if loc is None or loc.type != "location":
+                        raise HTTPException(
+                            status_code=500,
+                            detail="target location gone or not a location",
+                        )
+
+                # Filter involved_character_ids (drop deleted chars)
+                raw_involved = data.get("involved_character_ids") or []
+                involved_ids = [i for i in raw_involved if db.get(Character, i) is not None]
+
+                event = Event(
+                    project_id=p.project_id,
+                    chapter_id=p.chapter_id,
+                    title=title,
+                    description=description,
+                    involved_characters=involved_ids,
+                    location_id=location_id,
+                    foreshadows=[],  # Extractor doesn't emit links; user adds post-accept
+                    extractor_log_id=p.extractor_log_id,
+                    pending_update_id=p.id,
+                )
+                db.add(event)
             else:
                 raise HTTPException(status_code=500, detail=f"unknown target_table: {p.target_table}")
         elif p.operation == "update":

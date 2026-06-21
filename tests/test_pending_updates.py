@@ -571,3 +571,168 @@ def test_reject_relationship_no_db_change(client, fake_router):
     with sm.SessionLocal() as s:
         rows = list(s.query(Relationship))
     assert rows == []
+
+
+def test_accept_event_inserts_row(client, fake_router):
+    """Accept an events pending → INSERT event row."""
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [],
+            "events": [
+                {"title": "残月伏击", "description": "韩梅伏击李雷",
+                 "involved_character_names": [], "location_name": ""}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "李雷"})
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    event_pending = next(p for p in pendings if p["target_table"] == "events")
+    assert event_pending["update_type"] == "hard_fact"
+    assert event_pending["entity_name"] == "残月伏击"
+
+    r = client.post(f"/api/pending-updates/{event_pending['id']}/accept")
+    assert r.status_code == 200
+    assert r.json()["status"] == "accepted"
+
+    # Direct DB check
+    from app.memory import session as sm
+    from app.memory.schema import Event
+    with sm.SessionLocal() as s:
+        rows = list(s.query(Event).filter(Event.chapter_id == ch))
+    assert len(rows) == 1
+    assert rows[0].title == "残月伏击"
+    assert rows[0].description == "韩梅伏击李雷"
+    assert rows[0].foreshadows == []
+    assert rows[0].pending_update_id == event_pending["id"]
+
+
+def test_accept_event_filters_deleted_characters(client, fake_router):
+    """accept filters out deleted characters from involved_character_ids."""
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [],
+            "events": [
+                {"title": "x", "description": "y",
+                 "involved_character_names": ["李雷", "韩梅"]}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    c1 = client.post("/api/characters", json={"project_id": pid, "name": "李雷"}).json()["id"]
+    c2 = client.post("/api/characters", json={"project_id": pid, "name": "韩梅"}).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    event_p = next(p for p in pendings if p["target_table"] == "events")
+
+    # Delete one character before accept
+    client.delete(f"/api/characters/{c2}")
+
+    r = client.post(f"/api/pending-updates/{event_p['id']}/accept")
+    assert r.status_code == 200
+
+    from app.memory import session as sm
+    from app.memory.schema import Event
+    with sm.SessionLocal() as s:
+        rows = list(s.query(Event).filter(Event.chapter_id == ch))
+    assert len(rows) == 1
+    assert rows[0].involved_characters == [c1]  # c2 filtered out
+
+
+def test_accept_event_invalid_location_type_500(client, fake_router):
+    """accept fails when location_id points to non-location lore."""
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [],
+            "events": [{"title": "x", "description": "y"}],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "李雷"})
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    # Faction lore (not location)
+    faction = client.post("/api/lore", json={
+        "project_id": pid, "type": "faction", "name": "守夜人",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    event_p = next(p for p in pendings if p["target_table"] == "events")
+
+    # Manually mutate the pending to point location_id at the faction
+    from app.memory import session as sm
+    from app.memory.schema import PendingUpdate
+    with sm.SessionLocal() as s:
+        p = s.get(PendingUpdate, event_p["id"])
+        pc = dict(p.proposed_change)  # new dict so SQLAlchemy detects change
+        pc["location_id"] = faction
+        p.proposed_change = pc
+        s.commit()
+
+    r = client.post(f"/api/pending-updates/{event_p['id']}/accept")
+    assert r.status_code == 500
+
+
+def test_reject_event_no_db_change(client, fake_router):
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {"new_characters": [], "updated_characters": [],
+                         "new_lore": [], "updated_lore": []},
+            "state_changes": [],
+            "relationship_changes": [],
+            "events": [{"title": "x", "description": "y"}],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "李雷"})
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+    pendings = client.get(f"/api/pending-updates?project_id={pid}").json()
+    event_p = next(p for p in pendings if p["target_table"] == "events")
+
+    r = client.post(f"/api/pending-updates/{event_p['id']}/reject", json={"note": "no"})
+    assert r.status_code == 200
+
+    from app.memory import session as sm
+    from app.memory.schema import Event
+    with sm.SessionLocal() as s:
+        rows = list(s.query(Event))
+    assert rows == []
