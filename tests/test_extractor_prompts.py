@@ -48,6 +48,7 @@ def test_render_user_full():
         existing_characters=[_fake_character()],
         existing_lore=[_fake_lore()],
         existing_relationships=[],
+        rejected_suggestions=[],
     )
     assert "夜行记" in out
     assert "李雷" in out
@@ -63,6 +64,7 @@ def test_render_user_minimal_no_entities():
         existing_characters=[],
         existing_lore=[],
         existing_relationships=[],
+        rejected_suggestions=[],
     )
     assert "夜行记" in out
     # Empty loops should not raise
@@ -124,7 +126,8 @@ def test_user_prompt_shows_current_state_for_existing_characters():
                  chapter=_stub_chapter(),
                  existing_characters=chars,
                  existing_lore=[],
-                 existing_relationships=[])
+                 existing_relationships=[],
+                 rejected_suggestions=[])
     assert "现状=警惕" in out
     assert "现状=(未记录)" in out  # empty current_state placeholder
 
@@ -163,7 +166,8 @@ def test_user_prompt_lists_existing_relationships():
                  chapter=SimpleNamespace(title="C", content="x", order_index=3),
                  existing_characters=chars,
                  existing_lore=[],
-                 existing_relationships=existing_rels)
+                 existing_relationships=existing_rels,
+                 rejected_suggestions=[])
     assert "已有关系" in out
     assert "李雷 → 韩梅" in out
     assert "旧友" in out
@@ -179,3 +183,42 @@ def test_system_prompt_has_events_section():
     assert "title" in out
     # Guidance about not auto-marking foreshadows
     assert "foreshadows" in out
+
+
+def test_render_extractor_user_rejected_suggestions():
+    """user.j2 renders rejected_suggestions section when present."""
+    from types import SimpleNamespace
+    chars = [SimpleNamespace(name="李雷", role="protagonist",
+                             background="bg", motivation="m", appearance="a",
+                             current_state="")]
+    rejected = [
+        {"entity_description": "人物：韩梅（supporting）", "note": "不准确"},
+        {"entity_description": "设定：残月酒馆（location）", "note": ""},
+    ]
+    out = render("extractor/user.j2",
+                 project=SimpleNamespace(title="T", genre="g", premise="p"),
+                 chapter=SimpleNamespace(title="C", content="x", order_index=3),
+                 existing_characters=chars,
+                 existing_lore=[],
+                 existing_relationships=[],
+                 rejected_suggestions=rejected)
+    assert "已拒绝" in out
+    assert "人物：韩梅" in out
+    assert "设定：残月酒馆" in out
+    assert "不准确" in out  # note rendered
+
+
+def test_render_extractor_user_empty_rejected():
+    """user.j2 omits rejected section when empty list."""
+    from types import SimpleNamespace
+    chars = [SimpleNamespace(name="李雷", role="protagonist",
+                             background="bg", motivation="m", appearance="a",
+                             current_state="")]
+    out = render("extractor/user.j2",
+                 project=SimpleNamespace(title="T", genre="g", premise="p"),
+                 chapter=SimpleNamespace(title="C", content="x", order_index=3),
+                 existing_characters=chars,
+                 existing_lore=[],
+                 existing_relationships=[],
+                 rejected_suggestions=[])
+    assert "已拒绝" not in out

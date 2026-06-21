@@ -26,4 +26,13 @@
 - {{ r.from_name }} → {{ r.to_name }}：{{ r.type }}（强度 {{ r.strength }}）{% if r.description %} — {{ r.description }}{% endif %}
 {% endfor %}
 
+{% if rejected_suggestions %}
+## 已拒绝的抽取建议（不要重复抽取）
+
+以下建议已被用户拒绝，不要在本章重复抽取相同内容：
+{% for r in rejected_suggestions %}
+- {{ r.entity_description }}{% if r.note %} — 原因：{{ r.note }}{% endif %}
+{% endfor %}
+{% endif %}
+
 请抽取本章的新实体、描述补充、人物状态变化、以及人物关系变化。

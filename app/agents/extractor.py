@@ -460,6 +460,44 @@ def extract_chapter(
                 "description": r.description,
             })
 
+    # M3d: negative memory — query rejected pendings to avoid re-suggesting
+    rejected_pendings = list(db.scalars(
+        select(PendingUpdate).where(
+            PendingUpdate.project_id == chapter.project_id,
+            PendingUpdate.status == "rejected",
+        ).order_by(PendingUpdate.id.desc()).limit(100)
+    ))
+
+    rejected_suggestions: list[dict] = []
+    for rp in rejected_pendings:
+        pc = rp.proposed_change or {}
+        desc = ""
+        if rp.target_table == "characters":
+            name = pc.get("name", "")
+            role = pc.get("role", "")
+            desc = f"人物：{name}（{role}）" if name else ""
+        elif rp.target_table == "lore_entries":
+            name = pc.get("name", "")
+            ltype = pc.get("type", "")
+            desc = f"设定：{name}（{ltype}）" if name else ""
+        elif rp.target_table == "character_states":
+            name = pc.get("character_name", "")
+            snapshot = pc.get("state_snapshot", "")
+            desc = f"状态变化：{name} → {snapshot}" if name else ""
+        elif rp.target_table == "relationships":
+            from_name = pc.get("from_character_name", "")
+            to_name = pc.get("to_character_name", "")
+            rtype = pc.get("type", "")
+            desc = f"关系：{from_name} → {to_name} {rtype}" if from_name else ""
+        elif rp.target_table == "events":
+            title = pc.get("title", "")
+            desc = f"事件：{title}" if title else ""
+        if desc:
+            rejected_suggestions.append({
+                "entity_description": desc,
+                "note": rp.decision_note or "",
+            })
+
     system_prompt = render("extractor/system.j2")
     user_prompt = render(
         "extractor/user.j2",
@@ -468,6 +506,7 @@ def extract_chapter(
         existing_characters=existing_characters,
         existing_lore=existing_lore,
         existing_relationships=existing_relationships_view,
+        rejected_suggestions=rejected_suggestions,
     )
 
     request = LLMRequest(
