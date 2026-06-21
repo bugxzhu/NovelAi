@@ -14,12 +14,9 @@ router = APIRouter()
 def list_character_states(
     character_id: int,
     order: str = Query("desc", pattern="^(desc|asc)$"),
-    limit: int = Query(20, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    # Cap silently at 100 to keep responses bounded without 422-ing the client.
-    limit = min(limit, 100)
-
     char = db.get(Character, character_id)
     if char is None:
         raise HTTPException(status_code=404, detail="character not found")

@@ -95,7 +95,7 @@ def test_list_states_explicit_asc(client, fake_state_router):
 
 
 def test_list_states_limit_cap(client, fake_state_router):
-    """limit > 100 should be capped to 100."""
+    """limit > 100 should 422 (aligned with other list endpoints)."""
     pid, cid, _ = _setup_and_accept_state(client)
     r = client.get(f"/api/characters/{cid}/states?limit=500")
-    assert r.status_code == 200  # not 422 — capped silently
+    assert r.status_code == 422
