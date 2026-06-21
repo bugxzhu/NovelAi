@@ -24,3 +24,7 @@ class InvalidContextError(Exception):
 
 class ExtractionError(Exception):
     """LLM extraction failed (invalid JSON, missing fields, etc.)."""
+
+
+class ReviewError(Exception):
+    """LLM review failed (invalid JSON, missing issues_by_category, max_tokens, etc.)."""
