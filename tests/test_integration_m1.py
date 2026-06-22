@@ -57,7 +57,10 @@ def test_full_m1_workflow(client):
     assert len(client.get(f"/api/characters?project_id={pid}").json()) == 1
     assert len(client.get(f"/api/chapters?project_id={pid}").json()) == 1
 
-    # 8. 删除项目级联清理
+    # 8. 删除项目级联清理（先删章节，项目有章节时不能直接删）
+    chapters = client.get(f"/api/chapters?project_id={pid}").json()
+    for ch in chapters:
+        client.delete(f"/api/chapters/{ch['id']}")
     assert client.delete(f"/api/projects/{pid}").status_code == 204
     assert client.get(f"/api/lore?project_id={pid}").json() == []
     assert client.get(f"/api/characters?project_id={pid}").json() == []
