@@ -32,13 +32,9 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
   if (!isOpen) return null;
 
   const handleSelectBranch = async (branch: DiscussBranch) => {
-    const currentOutline = chapter?.outline ?? "";
     const beatText = `【${branch.title}】${branch.summary}`;
-    const newOutline = currentOutline
-      ? `${currentOutline}\n\n${beatText}`
-      : beatText;
     try {
-      await updateChapter.mutateAsync({ outline: newOutline });
+      await updateChapter.mutateAsync({ outline: beatText });
       toast(`已将分支 ${branch.label}（${branch.title}）写入大纲`, "success");
       close();
     } catch (e) {
