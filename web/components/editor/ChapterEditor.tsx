@@ -9,12 +9,14 @@ import { EditorToolbar } from "./EditorToolbar";
 import { FinalizeButton } from "./FinalizeButton";
 import { ReviewButton } from "./ReviewButton";
 import { ReviewModal } from "./ReviewModal";
+import { DiscussButton } from "./DiscussButton";
+import { DiscussModal } from "./DiscussModal";
 import { useChapterAutosave } from "./useChapterAutosave";
 import { usePlotLines } from "@/lib/queries";
 import { useUpdateChapter } from "@/lib/queries";
 import { Chip } from "@/components/ui/Chip";
 import type { Chapter } from "@/lib/types";
-import { useReviewStore } from "@/lib/store";
+import { useReviewStore, useDiscussStore } from "@/lib/store";
 
 // TipTap's `Storage` is a generic record and does not auto-merge per-extension
 // storage, so we cast the `markdown` namespace to the package's own typed shape.
@@ -44,14 +46,16 @@ export function ChapterEditor({
   // chapters. Without this, highlight marks from chapter A would still be rendered
   // after the editor reloads content for chapter B.
   const clearIssues = useReviewStore((s) => s.clearIssues);
+  const clearDiscussResult = useDiscussStore((s) => s.clearResult);
   const prevChapterIdRef = useRef<number | null>(null);
   useEffect(() => {
     const prev = prevChapterIdRef.current;
     if (prev !== null && prev !== chapter.id) {
       clearIssues(prev);
+      clearDiscussResult(prev);
     }
     prevChapterIdRef.current = chapter.id;
-  }, [chapter.id, clearIssues]);
+  }, [chapter.id, clearIssues, clearDiscussResult]);
 
   const editor = useEditor({
     extensions,
@@ -129,6 +133,7 @@ export function ChapterEditor({
           <>
             <FinalizeButton chapterId={chapter.id} isFinal={chapter.status === "final"} />
             <ReviewButton chapterId={chapter.id} />
+            <DiscussButton chapterId={chapter.id} />
           </>
         }
       />
@@ -159,6 +164,7 @@ export function ChapterEditor({
         </div>
       )}
       <ReviewModal chapterId={chapter.id} editor={editor} />
+      <DiscussModal chapterId={chapter.id} />
     </div>
   );
 }
