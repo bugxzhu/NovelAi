@@ -34,7 +34,11 @@ export function ProjectCard({ project }: { project: Project }) {
     e.stopPropagation();
     if (!confirm(`删除项目 "${project.title || "未命名"}"？所有章节、人物、设定将一并删除。`)) return;
     del.mutate(project.id, {
-      onError: (e) => toast(`删除失败: ${(e as Error).message}`, "error"),
+      onError: (e) => {
+        const err = e as any;
+        const detail = err?.body?.detail || err?.message || "未知错误";
+        toast(`删除失败: ${detail}`, "error");
+      },
     });
   };
 

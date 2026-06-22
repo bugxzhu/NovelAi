@@ -42,3 +42,29 @@ def test_delete_project(client):
     r = client.delete(f"/api/projects/{pid}")
     assert r.status_code == 204
     assert client.get(f"/api/projects/{pid}").status_code == 404
+
+
+def test_delete_project_blocked_when_has_chapters(client):
+    """Cannot delete a project that has chapters — prevents accidental deletion."""
+    pid = client.post("/api/projects", json={"title": "X"}).json()["id"]
+    client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    })
+    r = client.delete(f"/api/projects/{pid}")
+    assert r.status_code == 409
+    assert "章节" in r.json()["detail"]
+    # Project still exists
+    assert client.get(f"/api/projects/{pid}").status_code == 200
+
+
+def test_delete_project_ok_after_chapters_removed(client):
+    """Can delete after all chapters are removed."""
+    pid = client.post("/api/projects", json={"title": "X"}).json()["id"]
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    # Delete chapter first
+    client.delete(f"/api/chapters/{ch}")
+    # Now project can be deleted
+    r = client.delete(f"/api/projects/{pid}")
+    assert r.status_code == 204

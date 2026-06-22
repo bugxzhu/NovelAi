@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.memory.schema import Project
+from app.memory.schema import Chapter, Project
 from app.models.project import ProjectCreate, ProjectRead, ProjectUpdate
 
 router = APIRouter()
@@ -48,5 +48,13 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     obj = db.get(Project, project_id)
     if obj is None:
         raise HTTPException(status_code=404, detail="project not found")
+    chapter_count = db.scalar(
+        select(Chapter.id).where(Chapter.project_id == project_id).limit(1)
+    )
+    if chapter_count is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="项目下有章节，无法删除。请先删除所有章节。",
+        )
     db.delete(obj)
     db.commit()
