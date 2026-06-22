@@ -49,9 +49,13 @@ def discuss_chapter(
     *,
     chapter_id: int,
     question: str,
+    selected_text: str | None = None,
     router: ModelRouter = default_router,
 ) -> DiscussResult:
     """Discuss a plot hypothetical. Single LLM call, sync.
+
+    If selected_text is provided, the discussion focuses on that specific
+    passage rather than the whole chapter.
 
     Raises:
         ChapterNotFoundError: chapter does not exist.
@@ -75,6 +79,7 @@ def discuss_chapter(
         milestones=bundle.milestones,
         recent_chapter_summaries=bundle.recent_chapter_summaries,
         question=question,
+        selected_text=selected_text or "",
     )
 
     request = LLMRequest(

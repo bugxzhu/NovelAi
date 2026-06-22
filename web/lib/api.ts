@@ -138,10 +138,10 @@ export const api = {
     http<ReviewResponse>(`/api/chapters/${chapterId}/review`, { method: "POST" }),
 
   // M4b-2: Discuss
-  discussChapter: (chapterId: number, question: string) =>
+  discussChapter: (chapterId: number, question: string, selectedText?: string) =>
     http<DiscussResponse>(`/api/chapters/${chapterId}/discuss`, {
       method: "POST",
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, selected_text: selectedText }),
     }),
 
   // M3c-B: Character States

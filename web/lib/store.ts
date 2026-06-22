@@ -221,6 +221,7 @@ const EMPTY_DISCUSS: DiscussResponse | null = null;
 interface DiscussState {
   resultByChapter: Record<number, DiscussResponse | null>;
   modalOpenFor: number | null;
+  selectedText: string;
   setResult: (chapterId: number, result: DiscussResponse) => void;
   closeModal: () => void;
   clearResult: (chapterId: number) => void;
@@ -229,6 +230,7 @@ interface DiscussState {
 export const useDiscussStore = create<DiscussState>((set) => ({
   resultByChapter: {},
   modalOpenFor: null,
+  selectedText: "",
   setResult: (chapterId, result) =>
     set((s) => ({
       resultByChapter: { ...s.resultByChapter, [chapterId]: result },

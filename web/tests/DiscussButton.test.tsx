@@ -9,12 +9,12 @@ describe("DiscussButton", () => {
   });
 
   it("renders button text", () => {
-    render(<DiscussButton chapterId={5} />);
+    render(<DiscussButton chapterId={5} editor={null} />);
     expect(screen.getByText(/探讨/)).toBeTruthy();
   });
 
   it("opens modal on click", async () => {
-    const { getByRole } = render(<DiscussButton chapterId={5} />);
+    const { getByRole } = render(<DiscussButton chapterId={5} editor={null} />);
     const { userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
     await user.click(getByRole("button", { name: /探讨/ }));

@@ -133,7 +133,7 @@ export function ChapterEditor({
           <>
             <FinalizeButton chapterId={chapter.id} isFinal={chapter.status === "final"} />
             <ReviewButton chapterId={chapter.id} />
-            <DiscussButton chapterId={chapter.id} />
+            <DiscussButton chapterId={chapter.id} editor={editor} />
           </>
         }
       />

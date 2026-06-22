@@ -20,6 +20,7 @@ import type { DiscussBranch, DiscussResponse } from "@/lib/types";
 export function DiscussModal({ chapterId }: { chapterId: number }) {
   const result = useDiscussStore((s) => s.resultByChapter[chapterId] ?? null);
   const isOpen = useDiscussStore((s) => s.modalOpenFor === chapterId);
+  const selectedText = useDiscussStore((s) => s.selectedText);
   const close = useDiscussStore((s) => s.closeModal);
   const setResult = useDiscussStore((s) => s.setResult);
   const toast = useToast();
@@ -49,7 +50,11 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
     }
     setLoading(true);
     try {
-      const r = await api.discussChapter(chapterId, question);
+      const r = await api.discussChapter(
+        chapterId,
+        question,
+        selectedText || undefined,
+      );
       setResult(chapterId, r);
       toast("推演完成", "success");
     } catch (e) {
@@ -83,6 +88,18 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Selected text context (shown when user had text selected) */}
+          {selectedText && (
+            <div className="bg-input/50 border border-line rounded p-2">
+              <div className="text-xs text-text-muted-bright mb-1">
+                📝 选中段落（针对此段探讨）：
+              </div>
+              <div className="text-xs text-text-muted line-clamp-3">
+                {selectedText}
+              </div>
+            </div>
+          )}
+
           {/* Question input (always visible at top) */}
           <div>
             <label className="text-xs text-text-muted-bright block mb-1">你的设想</label>

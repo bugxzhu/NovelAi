@@ -12,6 +12,7 @@ class DiscussBranch(BaseModel):
 
 class DiscussRequest(BaseModel):
     question: str
+    selected_text: str | None = None
 
 
 class DiscussResponse(BaseModel):

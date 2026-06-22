@@ -24,6 +24,7 @@ def discuss(
     try:
         result = discuss_chapter(
             db, chapter_id=chapter_id, question=body.question,
+            selected_text=body.selected_text,
             router=default_router,
         )
     except ChapterNotFoundError:
