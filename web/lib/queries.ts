@@ -16,6 +16,7 @@ import type {
   RelationshipCreate, RelationshipUpdate,
   EventCreate, EventUpdate, EventFilter,
   PlotLineCreate, PlotLineUpdate, PlotLineStatus,
+  StoryMilestoneCreate, StoryMilestoneUpdate,
 } from "./types";
 
 // Projects
@@ -392,5 +393,38 @@ export function useDeletePlotLine(projectId: number) {
   return useMutation({
     mutationFn: (id: number) => api.deletePlotLine(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["plot-lines", projectId] }),
+  });
+}
+
+// === M4b-1: Story Milestones ===
+
+export function useStoryMilestones(projectId: number) {
+  return useQuery({
+    queryKey: ["story-milestones", projectId],
+    queryFn: () => api.listStoryMilestones(projectId),
+  });
+}
+
+export function useCreateStoryMilestone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: StoryMilestoneCreate) => api.createStoryMilestone(data),
+    onSuccess: (data) => qc.invalidateQueries({ queryKey: ["story-milestones", data.project_id] }),
+  });
+}
+
+export function useUpdateStoryMilestone(id: number, projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: StoryMilestoneUpdate) => api.updateStoryMilestone(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["story-milestones", projectId] }),
+  });
+}
+
+export function useDeleteStoryMilestone(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteStoryMilestone(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["story-milestones", projectId] }),
   });
 }

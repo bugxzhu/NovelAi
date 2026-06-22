@@ -11,6 +11,7 @@ import type {
   Relationship, RelationshipCreate, RelationshipUpdate, RelationshipHistoryItem,
   Event, EventCreate, EventUpdate, EventFilter,
   PlotLine, PlotLineCreate, PlotLineUpdate, PlotLineStatus,
+  StoryMilestone, StoryMilestoneCreate, StoryMilestoneUpdate,
   Issue, ReviewResponse,
 } from "./types";
 
@@ -198,4 +199,14 @@ export const api = {
     http<PlotLine>(`/api/plot-lines/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deletePlotLine: (id: number) =>
     http<void>(`/api/plot-lines/${id}`, { method: "DELETE" }),
+
+  // M4b-1: Story Milestones
+  listStoryMilestones: (projectId: number) =>
+    http<StoryMilestone[]>(`/api/story-milestones${qs({ project_id: projectId })}`),
+  createStoryMilestone: (data: StoryMilestoneCreate) =>
+    http<StoryMilestone>("/api/story-milestones", { method: "POST", body: JSON.stringify(data) }),
+  updateStoryMilestone: (id: number, data: StoryMilestoneUpdate) =>
+    http<StoryMilestone>(`/api/story-milestones/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteStoryMilestone: (id: number) =>
+    http<void>(`/api/story-milestones/${id}`, { method: "DELETE" }),
 };

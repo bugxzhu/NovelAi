@@ -477,3 +477,40 @@ export interface PlotLineUpdate {
   start_chapter?: number | null;
   end_chapter?: number | null;
 }
+
+// === M4b-1: Story Milestones ===
+
+export interface StoryMilestone {
+  id: number;
+  project_id: number;
+  order_index: number;
+  type: string;
+  title: string;
+  description: string;
+  chapter_start: number | null;
+  chapter_end: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StoryMilestoneCreate {
+  project_id: number;
+  order_index?: number;
+  type?: string;
+  title: string;
+  description?: string;
+  chapter_start?: number | null;
+  chapter_end?: number | null;
+  status?: string;
+}
+
+export interface StoryMilestoneUpdate {
+  order_index?: number;
+  type?: string;
+  title?: string;
+  description?: string;
+  chapter_start?: number | null;
+  chapter_end?: number | null;
+  status?: string;
+}
