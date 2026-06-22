@@ -14,6 +14,7 @@ import type {
   StoryMilestone, StoryMilestoneCreate, StoryMilestoneUpdate,
   Issue, ReviewResponse,
   DiscussBranch, DiscussRequest, DiscussResponse,
+  PolishRequest, PolishResponse,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -142,6 +143,13 @@ export const api = {
     http<DiscussResponse>(`/api/chapters/${chapterId}/discuss`, {
       method: "POST",
       body: JSON.stringify({ question, selected_text: selectedText }),
+    }),
+
+  // Polish
+  polishChapter: (chapterId: number, selectedText?: string) =>
+    http<PolishResponse>(`/api/chapters/${chapterId}/polish`, {
+      method: "POST",
+      body: JSON.stringify({ selected_text: selectedText || null } as PolishRequest),
     }),
 
   // M3c-B: Character States

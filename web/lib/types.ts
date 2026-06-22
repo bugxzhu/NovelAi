@@ -537,3 +537,15 @@ export interface DiscussResponse {
   reasoning: string;
   log_id: number;
 }
+
+// === Polish ===
+
+export interface PolishRequest {
+  selected_text?: string | null;
+}
+
+export interface PolishResponse {
+  polished_text: string;
+  is_selection: boolean;
+  log_id: number;
+}

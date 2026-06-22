@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Issue, DiscussResponse } from "./types";
+import type { Issue, DiscussResponse, PolishResponse } from "./types";
 
 export type ActiveView = "chapters" | "characters" | "lore" | "history" | "search";
 export type GenerationStatus = "idle" | "preparing" | "streaming" | "done" | "error";
@@ -251,3 +251,39 @@ export const useDiscussStore = create<DiscussState>((set) => ({
 // Re-export the EMPTY constant for consumers that need a stable null reference.
 // (Mirrors the EMPTY_* pattern used elsewhere to avoid selector snapshot churn.)
 export { EMPTY_DISCUSS };
+
+// === Polish ===
+// Polish results are ephemeral per-session. The button captures the editor's
+// selection range (from/to) before the API call so the modal can replace that
+// exact range on Accept. For whole-chapter polish (no selection), Accept calls
+// editor.commands.setContent(polished_text).
+interface PolishState {
+  result: PolishResponse | null;
+  modalOpen: boolean;
+  selectedText: string;
+  // ProseMirror positions for the selection captured at click time. Null when
+  // the polish was whole-chapter (no selection) OR before any click.
+  selectionFrom: number | null;
+  selectionTo: number | null;
+  setResult: (result: PolishResponse) => void;
+  setSelectionRange: (from: number, to: number) => void;
+  closeModal: () => void;
+}
+
+export const usePolishStore = create<PolishState>((set) => ({
+  result: null,
+  modalOpen: false,
+  selectedText: "",
+  selectionFrom: null,
+  selectionTo: null,
+  setResult: (result) => set({ result, modalOpen: true }),
+  setSelectionRange: (from, to) => set({ selectionFrom: from, selectionTo: to }),
+  closeModal: () =>
+    set({
+      result: null,
+      modalOpen: false,
+      selectedText: "",
+      selectionFrom: null,
+      selectionTo: null,
+    }),
+}));

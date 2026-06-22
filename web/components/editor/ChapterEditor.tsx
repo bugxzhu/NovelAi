@@ -11,6 +11,8 @@ import { ReviewButton } from "./ReviewButton";
 import { ReviewModal } from "./ReviewModal";
 import { DiscussButton } from "./DiscussButton";
 import { DiscussModal } from "./DiscussModal";
+import { PolishButton } from "./PolishButton";
+import { PolishModal } from "./PolishModal";
 import { useChapterAutosave } from "./useChapterAutosave";
 import { usePlotLines } from "@/lib/queries";
 import { useUpdateChapter } from "@/lib/queries";
@@ -134,6 +136,7 @@ export function ChapterEditor({
             <FinalizeButton chapterId={chapter.id} isFinal={chapter.status === "final"} />
             <ReviewButton chapterId={chapter.id} />
             <DiscussButton chapterId={chapter.id} editor={editor} />
+            <PolishButton chapterId={chapter.id} editor={editor} />
           </>
         }
       />
@@ -165,6 +168,7 @@ export function ChapterEditor({
       )}
       <ReviewModal chapterId={chapter.id} editor={editor} />
       <DiscussModal chapterId={chapter.id} />
+      <PolishModal editor={editor} />
     </div>
   );
 }

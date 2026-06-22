@@ -1,0 +1,64 @@
+# 项目背景
+标题：{{ project.title }}
+类型：{{ project.genre }}
+主题：{{ project.main_theme }}
+基调：{{ project.tone }}
+核心设定：{{ project.premise }}
+
+{% if world_overview %}
+# 世界观
+- 时代：{{ world_overview.setting_era }}
+- 力量体系：{{ world_overview.power_system }}
+- 规则与禁忌：{{ world_overview.rules_and_taboos }}
+- 地理：{{ world_overview.geography_summary }}
+- 文化：{{ world_overview.culture_summary }}
+{% endif %}
+
+{% if characters %}
+# 本场景涉及人物
+{% for c in characters %}
+## {{ c.name }}（{{ c.role }}）
+- 性格：{{ c.personality | tojson }}
+- 说话风格：{{ c.speech_style }}
+- 当前状态：{{ character_states[c.id].current_state }}
+- 动机：{{ c.motivation }}
+
+{% endfor %}
+{% endif %}
+
+{% if relationships %}
+# 当前关系（仅本场景涉及人物间）
+{% for r in relationships %}
+- {{ r.from_name }} → {{ r.to_name }}：{{ r.type }}（强度 {{ r.strength }}）— {{ r.description }}
+{% endfor %}
+{% endif %}
+
+{% if plot_lines %}
+# 当前情节线
+{% for pl in plot_lines %}
+- [{{ pl.type }}] {{ pl.title }}：{{ pl.summary }}
+{% endfor %}
+{% endif %}
+
+{% if milestones %}
+# 故事蓝图
+{% for m in milestones %}
+- [{{ m.status }}] {{ m.title }}（{{ m.type }}，第 {{ m.chapter_start or "?" }}-{% if m.chapter_end %}{{ m.chapter_end }}{% else %}?{% endif %} 章）：{{ m.description }}
+{% endfor %}
+{% endif %}
+
+{% if selected_text %}
+# 待润色段落（仅润色此段）
+---
+{{ selected_text }}
+---
+
+请润色上述段落。直接输出润色后的文字。
+{% else %}
+# 待润色章节正文
+---
+{{ chapter_content }}
+---
+
+请润色上述整章正文。直接输出润色后的文字。
+{% endif %}

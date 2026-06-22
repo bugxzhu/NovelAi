@@ -32,3 +32,7 @@ class ReviewError(Exception):
 
 class DiscussError(Exception):
     """LLM discuss failed (invalid JSON, max_tokens, etc.)."""
+
+
+class PolishError(Exception):
+    """LLM polish failed (max_tokens, empty response, etc.)."""
