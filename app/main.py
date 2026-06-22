@@ -20,6 +20,7 @@ from app.api import (
     plot_lines,
     projects,
     relationships,
+    story_milestones,
     world,
 )
 from app.memory.session import init_db
@@ -71,6 +72,8 @@ def create_app() -> FastAPI:
     app.include_router(relationships.router, prefix="/api/relationships",
                        tags=["relationships"])
     app.include_router(events.router, prefix="/api/events", tags=["events"])
+    app.include_router(story_milestones.router, prefix="/api/story-milestones",
+                       tags=["story_milestones"])
     return app
 
 
