@@ -1,228 +1,173 @@
 # NovelAI
 
-AI 辅助小说写作工具——通过结构化记忆让 AI 在长篇创作中保持人物、关系、情节、伏笔和世界观的一致性。
+AI 辅助小说写作工具——让 AI 在长篇创作中记住每个人物、每段关系、每个伏笔。
 
-## 核心理念
+## 为什么需要 NovelAI
 
-传统 AI 写作工具用全文 RAG 检索，长篇容易"失忆"。NovelAI 采用**结构化记忆**策略：
+写长篇小说时，AI 最大的问题是**失忆**：写到第 20 章时，AI 已经忘了第 3 章的伏笔、人物之间的关系变化、每个角色的成长轨迹。
 
-- **常驻层**（每次生成必注入）：项目设定、世界观、涉及人物档案、当前关系、情节线状态、故事蓝图
-- **检索层**（按需向量召回）：过往章节中语义相关的场景/对话
-- **时序层**（跨章追踪）：人物状态轨迹、关系演变、伏笔标注
+NovelAI 通过**结构化记忆**解决这个问题：不是让 AI 重新读全文，而是把关键信息（人物状态、关系、伏笔、世界观）结构化存储，每次写作时精准注入。
 
-四个 AI Agent 各司其职：**Writer**（写章节）、**Extractor**（抽记忆）、**Reviewer**（审稿）、**Discuss**（脑暴推演）。
+## 核心功能
 
-## 功能一览
+### ✍️ 写作
 
-### 写作
+- **大纲驱动生成**：写一段 beat 大纲（"李雷在残月酒馆遇见韩梅，气氛紧张"），AI 扩写成完整正文，打字机式流式输出
+- **续写**：在光标处继续写，AI 接续上下文
+- **✨ 润色**：选中一段文字点润色，AI 基于整章上下文改进表达；可以指定方向（如"增加心理描写""让节奏更紧凑"）；段落润色提供 2 个方案供你选择
+- **故事蓝图**：规划全局结构（激励事件→高潮→转折→结局），AI 写作时知道当前处于故事的哪个阶段
 
-| 功能 | 说明 |
+### 🔍 审稿
+
+写完一章后一键审查 5 个维度：
+
+| 维度 | 检查什么 |
 |---|---|
-| 大纲驱动生成 | 写 beat 大纲 → AI 扩写成正文（SSE 流式打字机） |
-| 续写 | 在光标处触发 AI 续写 |
-| ✨ 润色 | 选中段落或整章润色；支持指定润色方向（如"增加心理描写"）；段落润色出 2 个方案供选择 |
-| 故事蓝图 | 里程碑式全局结构管理（激励事件/高潮/转折等），注入 Writer 上下文 |
+| 人物一致性 | 性格/说话风格/状态是否符合档案和成长轨迹 |
+| 关系合理性 | 互动是否符合当前关系（仇人不会突然友善） |
+| 情节矛盾 | 与前几章是否有冲突、时间线是否连贯 |
+| 伏笔完整性 | 埋了没收、无铺垫爆发 |
+| 世界观一致性 | 能力/规则/设定是否违反既有设定 |
 
-### AI Agent
+审查结果在编辑器中**高亮定位**问题段落，按严重程度（🔴必须改 / 🟡建议改 / 🔵可选）分类。
 
-| Agent | 触发方式 | 功能 |
-|---|---|---|
-| Writer | 点"⚡ 生成" | 基于大纲 + 常驻层 + 向量检索，流式生成章节正文 |
-| Extractor | 点"✓ 完成本章" | 抽取章节摘要、新人物/设定、人物状态变化、关系变化、章节事件 |
-| Reviewer | 点"🔍 审稿" | 5 维度审查（人物/关系/情节/伏笔/世界观），Issue 高亮定位 |
-| Discuss | 点"💬 探讨" | "如果...会怎样"多分支推演 + 推荐；支持选中文字针对性探讨 |
+### 💬 探讨
 
-### 结构化记忆
+写之前先探索："如果让李雷在这里和韩梅和解会怎样？"
 
-| 记忆类型 | 数据表 | 说明 |
-|---|---|---|
-| 章节摘要 | `chapters.summary` | AI 生成的 200-400 字摘要 |
-| 硬事实 | `pending_updates` (auto=true) | 新人物/设定/事件——accept 后入库 |
-| 人物状态轨迹 | `character_states` | 每章末的状态快照（情绪/处境/目标），按章节回溯 |
-| 关系演变 | `relationships` | 单向关系时序表（from→to），accept 时自动版本切换 |
-| 伏笔标注 | `events` + `foreshadows` | 事件管理 + 跨章伏笔链接 + 孤儿伏笔检测 |
-| 情节线 | `plot_lines` | 主线/支线状态追踪（planned/active/resolved） |
-| 故事蓝图 | `story_milestones` | 全局里程碑结构（激励/高潮/转折），注入 Writer/Reviewer |
-| 向量检索 | `chunk_meta` + `vec_chunks` | sqlite-vec 语义检索过往章节场景 |
-| 否定记忆 | `pending_updates` (rejected) | 已拒绝的抽取建议不再重复（注入 Extractor prompt） |
+AI 从 3 个不同方向推演，每个分支分析冲突点、新机会、人物弧光影响，并推荐最佳方案。选中一段文字后点探讨，可以针对这段具体分析。
 
-### 项目管理
+选定方案后一键写入章节大纲，然后生成正文。
 
-- 项目 CRUD（有章节时不可删除，防止误操作）
-- 世界观总览（时代/力量体系/规则禁忌/地理文化）
-- Lore 设定库（地点/势力/物品/组织/概念，支持层级嵌套）
-- 人物档案（性格/说话风格/动机/背景/所属势力）
-- 章节管理（草稿/写作中/已定稿）
-- 待处理面板（pending_updates 审批队列）
+### 📝 记忆抽取
 
-## 技术栈
+点"完成本章"后，AI 自动抽取：
 
-| 层 | 技术 |
-|---|---|
-| 后端 | Python 3.11 + FastAPI + SQLAlchemy 2.0 + Alembic |
-| 数据库 | SQLite + sqlite-vec（单文件，零运维） |
-| 前端 | Next.js 15 + React + TipTap v3 + Zustand + TanStack Query |
-| LLM | 多提供商（Anthropic Claude / OpenAI / DashScope / Deepseek / Ollama） |
-| 测试 | pytest（后端）+ Vitest（前端单元）+ Playwright（E2E） |
+- **章节摘要**（200-400 字）
+- **新人物/新设定**（首次出现的角色、地点、势力）
+- **人物状态变化**（李雷从"警惕"变成"愤怒且受伤"）
+- **关系变化**（李雷→韩梅：旧友 → 仇人）
+- **章节事件**（残月酒馆伏击、获得玄铁剑）
 
-## 快速开始
+抽取结果进入待处理面板，你逐条**接受/拒绝**，只有接受的数据才写入记忆库。重新抽取时，已拒绝的建议不会重复出现（否定记忆）。
 
-### 1. 环境准备
+## 写作流程
+
+```
+1. 创建项目，填写标题/类型/核心设定
+2. 设置世界观（时代、力量体系、规则禁忌）
+3. 创建人物（性格、说话风格、动机、背景）
+4. 建立关系（谁认识谁、什么关系）
+5. 规划故事蓝图（里程碑：激励事件、高潮、转折...）
+
+         ↓ 开始写作 ↓
+
+6. 写章节大纲（一段话描述这章要发生什么）
+7. 点 ⚡ 生成 → AI 流式扩写正文
+8. 修改不满意的地方 / ✨ 润色
+9. 点 ✓ 完成本章 → AI 抽取记忆 → 审批
+10. 点 🔍 审稿 → 检查 5 维度问题 → 修改
+11. 写下一章前点 💬 探讨 → 选方向 → 写大纲 → 生成
+12. 循环 6-11
+```
+
+## 管理功能
+
+### 人物管理
+人物档案 + **状态轨迹**：每个角色在每章末的状态快照（情绪/处境/目标），按时间线回看角色成长弧光。
+
+### 关系管理
+**单向关系时序**：记录"A 视 B 为仇人"并追踪演变（第 5 章由友变敌）。每对关系可查看完整演变历史。
+
+### 事件 + 伏笔
+记录章节中的关键事件，手动标注"A 是 B 的伏笔"。**孤儿伏笔检测**：高亮标记"埋了但还没被兑现"的伏笔。
+
+### 情节线
+主线/支线管理（计划中/进行中/已完结/已废弃），Writer 和 Reviewer 能看到当前在推进哪些线。
+
+### 故事蓝图
+里程碑式全局结构规划，标记每个转折点对应的章节范围和状态。
+
+### 向量检索
+每章定稿后自动切分并向量化，后续写作时 AI 自动召回语义相关的过往场景（如"李雷上次受伤"的段落），无需手动查找。
+
+## 安装与启动
+
+### 准备
 
 ```bash
 # 克隆项目
 git clone <repo-url> && cd novelAI
 
-# 后端
+# 后端依赖
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 前端
+# 前端依赖
 cd web && npm install && cd ..
 
-# 配置环境变量
+# 配置 API Key
 cp .env.example .env
-# 编辑 .env 填入 API Key
+# 编辑 .env，填入你的 LLM API Key
+
+# 初始化数据库
+alembic upgrade head
 ```
 
-### 2. 配置 LLM（.env）
+### 配置 AI 模型（.env 文件）
 
+支持多种 AI 提供商，任选其一：
+
+**Anthropic Claude（推荐，质量最高）：**
 ```bash
-# 选择 Provider
-NOVELAI_LLM_PROVIDER=claude    # 或 openai
-
-# Anthropic Claude
-ANTHROPIC_API_KEY=sk-ant-...
+NOVELAI_LLM_PROVIDER=claude
+ANTHROPIC_API_KEY=你的Key
 ANTHROPIC_MODEL=claude-sonnet-4-6
+```
 
-# 或 OpenAI 兼容端点（支持 DashScope/Deepseek/Ollama 等）
-OPENAI_API_KEY=sk-...
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o
+**OpenAI / Deepseek / 通义千问：**
+```bash
+NOVELAI_LLM_PROVIDER=openai
+OPENAI_API_KEY=你的Key
+OPENAI_BASE_URL=https://api.openai.com/v1    # 或 Deepseek/阿里云的地址
+OPENAI_MODEL=gpt-4o                           # 或 deepseek-chat / qwen-plus
+```
 
-# 向量检索（需 OpenAI 兼容端点，Anthropic 不提供 embedding）
+**本地模型（Ollama）：**
+```bash
+NOVELAI_LLM_PROVIDER=openai
+OPENAI_API_KEY=ollama                          # 任意值
+OPENAI_BASE_URL=http://localhost:11434/v1
+OPENAI_MODEL=qwen2.5:14b
+```
+
+**向量检索（需要 OpenAI 兼容端点）：**
+```bash
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_DIMENSIONS=1536
 ```
 
-### 3. 初始化数据库
+> 注意：Anthropic 不提供 embedding API，向量检索需要额外配置 OpenAI 兼容端点。不配置向量检索也能用，Writer 只是不会自动召回过往场景。
+
+### 启动
 
 ```bash
-alembic upgrade head
-```
-
-### 4. 启动
-
-```bash
-# 终端 1：后端（端口 8005）
+# 终端 1：后端
 uvicorn app.main:app --reload --port 8005
 
-# 终端 2：前端（端口 3300）
+# 终端 2：前端
 cd web && npm run dev
 ```
 
-访问 http://localhost:3300 开始使用。
+浏览器打开 **http://localhost:3300** 开始使用。
 
-## 写作流程
+## 技术栈
 
-```
-创建项目 → 设定世界观 → 建人物/关系 → 写第 1 章大纲
-    ↓
-点 "⚡ 生成" → Writer 扩写正文（流式）
-    ↓
-修改/润色 → 点 "✓ 完成本章" → Extractor 抽取记忆
-    ↓
-审批 pending_updates（新人物/设定/状态/关系/事件）
-    ↓
-点 "🔍 审稿" → Reviewer 5 维度审查 → 修改
-    ↓
-写下一章 → 点 "💬 探讨" 脑暴 → Writer 生成 → 循环
-```
-
-## API 概览
-
-| 资源 | 端点 |
-|---|---|
-| 项目 | `POST/GET/PATCH/DELETE /api/projects` |
-| 世界观 | `PUT/GET /api/projects/{id}/world-overview` |
-| Lore 设定 | `POST/GET/PATCH/DELETE /api/lore` |
-| 人物 | `POST/GET/PATCH/DELETE /api/characters` |
-| 人物状态 | `GET /api/characters/{id}/states` |
-| 关系 | `POST/GET/PATCH/DELETE /api/relationships` |
-| 关系历史 | `GET /api/relationships/history` |
-| 事件 | `POST/GET/PATCH/DELETE /api/events` |
-| 情节线 | `POST/GET/PATCH/DELETE /api/plot-lines` |
-| 故事蓝图 | `POST/GET/PATCH/DELETE /api/story-milestones` |
-| 章节 | `POST/GET/PATCH/DELETE /api/chapters` |
-| 章节生成 | `POST /api/chapters/{id}/generate`（SSE 流式） |
-| 章节定稿 | `POST /api/chapters/{id}/finalize` |
-| 章节审稿 | `POST /api/chapters/{id}/review` |
-| 章节探讨 | `POST /api/chapters/{id}/discuss` |
-| 章节润色 | `POST /api/chapters/{id}/polish` |
-| 待处理 | `GET /api/pending-updates` + `POST .../{id}/accept` + `POST .../{id}/reject` |
-| 生成日志 | `GET /api/generation-logs` |
-
-完整文档：http://127.0.0.1:8005/docs
-
-## 测试
-
-```bash
-# 后端（388+ 测试）
-pytest
-
-# 前端单元（82+ 测试）
-cd web && npm test
-
-# E2E（需后端运行）
-cd web && npm run test:e2e
-```
-
-## 数据库迁移
-
-```bash
-alembic upgrade head      # 应用所有迁移
-alembic current           # 查看当前版本
-alembic downgrade -1      # 回滚一步
-```
-
-**不要用 `rm data/novelai.db` 重建**——会丢失所有数据。
-
-## 项目结构
-
-```
-app/
-├── agents/           # AI Agent 编排
-│   ├── writer.py       # 写作生成（SSE 流式）
-│   ├── extractor.py    # 章节记忆抽取
-│   ├── reviewer.py     # 5 维度审稿
-│   ├── discuss.py      # 多分支推演
-│   ├── polish.py       # 文字润色
-│   └── retrieval.py    # 向量检索层
-├── memory/           # 记忆服务
-│   ├── schema.py       # SQLAlchemy 模型（12 张表）
-│   ├── retrieval.py    # 常驻层 + 检索层组装
-│   └── session.py      # DB 连接 + sqlite-vec
-├── llm/              # LLM 抽象层
-│   ├── base.py         # Provider 协议
-│   ├── router.py       # 多提供商路由
-│   ├── providers/      # Claude / OpenAI 实现
-│   └── prompts/        # Jinja2 模板（extractor/writer/reviewer/discuss/polish）
-├── api/              # FastAPI 路由
-└── models/           # Pydantic schemas
-
-web/
-├── app/projects/[projectId]/  # 项目内页面
-│   ├── chapters/        # 章节编辑器
-│   ├── characters/      # 人物管理 + 状态轨迹
-│   ├── relationships/   # 关系管理 + 演变历史
-│   ├── events/          # 事件 + 伏笔链接
-│   ├── plot-lines/      # 情节线管理
-│   ├── outline/         # 故事蓝图
-│   └── pending/         # 待处理审批
-├── components/editor/    # TipTap 编辑器 + AI 按钮
-└── lib/                  # API client + hooks + store
-```
+- **后端**：Python + FastAPI + SQLite（单文件数据库，零运维）
+- **前端**：Next.js + React + TipTap 富文本编辑器
+- **AI**：多提供商支持（Claude / OpenAI / Deepseek / 通义千问 / 本地 Ollama）
+- **向量检索**：sqlite-vec（与主数据库同文件，无需额外服务）
 
 ## License
 
