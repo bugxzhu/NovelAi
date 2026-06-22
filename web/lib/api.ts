@@ -13,6 +13,7 @@ import type {
   PlotLine, PlotLineCreate, PlotLineUpdate, PlotLineStatus,
   StoryMilestone, StoryMilestoneCreate, StoryMilestoneUpdate,
   Issue, ReviewResponse,
+  DiscussBranch, DiscussRequest, DiscussResponse,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -135,6 +136,13 @@ export const api = {
   // M4a: Reviewer
   reviewChapter: (chapterId: number) =>
     http<ReviewResponse>(`/api/chapters/${chapterId}/review`, { method: "POST" }),
+
+  // M4b-2: Discuss
+  discussChapter: (chapterId: number, question: string) =>
+    http<DiscussResponse>(`/api/chapters/${chapterId}/discuss`, {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }),
 
   // M3c-B: Character States
   listCharacterStates: (

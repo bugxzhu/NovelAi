@@ -514,3 +514,26 @@ export interface StoryMilestoneUpdate {
   chapter_end?: number | null;
   status?: string;
 }
+
+// === M4b-2: Discuss ===
+
+export interface DiscussBranch {
+  label: string;
+  title: string;
+  summary: string;
+  conflicts: string;
+  opportunities: string;
+  character_impact: string;
+}
+
+export interface DiscussRequest {
+  question: string;
+}
+
+export interface DiscussResponse {
+  question: string;
+  branches: DiscussBranch[];
+  recommended: string;
+  reasoning: string;
+  log_id: number;
+}

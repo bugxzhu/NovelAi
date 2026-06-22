@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Issue } from "./types";
+import type { Issue, DiscussResponse } from "./types";
 
 export type ActiveView = "chapters" | "characters" | "lore" | "history" | "search";
 export type GenerationStatus = "idle" | "preparing" | "streaming" | "done" | "error";
@@ -213,3 +213,39 @@ export const useReviewStore = create<ReviewState>((set) => ({
       };
     }),
 }));
+
+// === M4b-2: Discuss ===
+// Discuss results are NOT persisted (ephemeral, per-session). Tied to current session only.
+const EMPTY_DISCUSS: DiscussResponse | null = null;
+
+interface DiscussState {
+  resultByChapter: Record<number, DiscussResponse | null>;
+  modalOpenFor: number | null;
+  setResult: (chapterId: number, result: DiscussResponse) => void;
+  closeModal: () => void;
+  clearResult: (chapterId: number) => void;
+}
+
+export const useDiscussStore = create<DiscussState>((set) => ({
+  resultByChapter: {},
+  modalOpenFor: null,
+  setResult: (chapterId, result) =>
+    set((s) => ({
+      resultByChapter: { ...s.resultByChapter, [chapterId]: result },
+      modalOpenFor: chapterId,
+    })),
+  closeModal: () => set({ modalOpenFor: null }),
+  clearResult: (chapterId) =>
+    set((s) => {
+      const next = { ...s.resultByChapter };
+      delete next[chapterId];
+      return {
+        resultByChapter: next,
+        modalOpenFor: s.modalOpenFor === chapterId ? null : s.modalOpenFor,
+      };
+    }),
+}));
+
+// Re-export the EMPTY constant for consumers that need a stable null reference.
+// (Mirrors the EMPTY_* pattern used elsewhere to avoid selector snapshot churn.)
+export { EMPTY_DISCUSS };
