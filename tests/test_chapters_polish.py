@@ -1,4 +1,5 @@
 """POST /api/chapters/{id}/polish API tests."""
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,7 +12,8 @@ def fake_polish_router(monkeypatch):
     fake = MagicMock()
     fake.resolve_model = MagicMock(return_value=("claude", "claude-sonnet-4-6"))
     fake.complete = MagicMock(return_value=LLMResponse(
-        text="润色结果。", input_tokens=10, output_tokens=20, stop_reason="end_turn",
+        text=json.dumps({"versions": ["润色结果。"]}),
+        input_tokens=10, output_tokens=20, stop_reason="end_turn",
     ))
     monkeypatch.setattr("app.api.chapters_polish.default_router", fake)
     return fake
@@ -35,16 +37,31 @@ def test_polish_success(client, fake_polish_router):
     r = client.post(f"/api/chapters/{ch}/polish", json={})
     assert r.status_code == 200
     data = r.json()
-    assert data["polished_text"] == "润色结果。"
+    assert data["polished_texts"] == ["润色结果。"]
     assert data["is_selection"] is False
+    assert data["direction"] == ""
     assert data["log_id"] > 0
 
 
 def test_polish_with_selection(client, fake_polish_router):
+    # For selection, the API expects 2 versions; reconfigure the mock.
+    fake_polish_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({"versions": ["版本A", "版本B"]}),
+        input_tokens=10, output_tokens=20, stop_reason="end_turn",
+    ))
     pid, ch = _seed(client)
     r = client.post(f"/api/chapters/{ch}/polish", json={"selected_text": "选中文字"})
     assert r.status_code == 200
-    assert r.json()["is_selection"] is True
+    data = r.json()
+    assert data["is_selection"] is True
+    assert len(data["polished_texts"]) == 2
+
+
+def test_polish_with_direction(client, fake_polish_router):
+    pid, ch = _seed(client)
+    r = client.post(f"/api/chapters/{ch}/polish", json={"direction": "增加心理描写"})
+    assert r.status_code == 200
+    assert r.json()["direction"] == "增加心理描写"
 
 
 def test_polish_llm_failure_returns_502(client, fake_polish_router):
@@ -57,7 +74,8 @@ def test_polish_llm_failure_returns_502(client, fake_polish_router):
 def test_polish_max_tokens_returns_422(client, fake_polish_router):
     pid, ch = _seed(client)
     fake_polish_router.complete = MagicMock(return_value=LLMResponse(
-        text="截断", input_tokens=10, output_tokens=20, stop_reason="max_tokens",
+        text=json.dumps({"versions": ["截断"]}),
+        input_tokens=10, output_tokens=20, stop_reason="max_tokens",
     ))
     r = client.post(f"/api/chapters/{ch}/polish", json={})
     assert r.status_code == 422

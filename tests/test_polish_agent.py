@@ -1,4 +1,5 @@
 """Polish agent tests (mock LLM)."""
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -49,24 +50,50 @@ def _make_router(text="润色后的文字。", stop_reason="end_turn"):
     return fake
 
 
+def _make_router_versions(versions, stop_reason="end_turn"):
+    """Mock router that returns a JSON {"versions": [...]} response."""
+    return _make_router(json.dumps({"versions": versions}), stop_reason)
+
+
 def test_polish_chapter_returns_text(db_session):
     p, ch = _seed_chapter(db_session)
-    fake = _make_router("更好的文字。")
+    fake = _make_router_versions(["更好的文字。"])
     result = polish_chapter(db_session, chapter_id=ch.id, router=fake)
     assert isinstance(result, PolishResult)
-    assert result.polished_text == "更好的文字。"
+    assert result.polished_texts == ["更好的文字。"]
     assert result.is_selection is False
+    assert result.direction == ""
     assert result.log_id > 0
 
 
-def test_polish_selection(db_session):
+def test_polish_selection_returns_two_versions(db_session):
     p, ch = _seed_chapter(db_session)
-    fake = _make_router("更好的段落。")
+    fake = _make_router_versions(["版本A", "版本B"])
     result = polish_chapter(
         db_session, chapter_id=ch.id, selected_text="原段落", router=fake,
     )
-    assert result.polished_text == "更好的段落。"
+    assert result.polished_texts == ["版本A", "版本B"]
     assert result.is_selection is True
+    assert len(result.polished_texts) == 2
+
+
+def test_polish_with_direction(db_session):
+    p, ch = _seed_chapter(db_session)
+    fake = _make_router_versions(["增加心理描写后的文字。"])
+    result = polish_chapter(
+        db_session, chapter_id=ch.id,
+        direction="增加心理描写", router=fake,
+    )
+    assert result.polished_texts == ["增加心理描写后的文字。"]
+    assert result.direction == "增加心理描写"
+
+
+def test_polish_fallback_on_invalid_json(db_session):
+    """If LLM does not return JSON, treat response as single version."""
+    p, ch = _seed_chapter(db_session)
+    fake = _make_router("纯文本润色结果。")
+    result = polish_chapter(db_session, chapter_id=ch.id, router=fake)
+    assert result.polished_texts == ["纯文本润色结果。"]
 
 
 def test_polish_empty_response_raises(db_session):
@@ -78,13 +105,13 @@ def test_polish_empty_response_raises(db_session):
 
 def test_polish_max_tokens_raises(db_session):
     p, ch = _seed_chapter(db_session)
-    fake = _make_router("截断的文字", stop_reason="max_tokens")
+    fake = _make_router_versions(["截断的文字"], stop_reason="max_tokens")
     with pytest.raises(PolishError):
         polish_chapter(db_session, chapter_id=ch.id, router=fake)
 
 
 def test_polish_not_found(db_session):
-    fake = _make_router()
+    fake = _make_router_versions(["润色结果。"])
     with pytest.raises(ChapterNotFoundError):
         polish_chapter(db_session, chapter_id=99999, router=fake)
 
@@ -92,7 +119,7 @@ def test_polish_not_found(db_session):
 def test_polish_writes_generation_log(db_session):
     from app.memory.schema import GenerationLog
     p, ch = _seed_chapter(db_session)
-    fake = _make_router("润色结果。")
+    fake = _make_router_versions(["润色结果。"])
     result = polish_chapter(db_session, chapter_id=ch.id, router=fake)
     log = db_session.get(GenerationLog, result.log_id)
     assert log is not None

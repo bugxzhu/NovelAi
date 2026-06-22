@@ -47,18 +47,27 @@
 {% endfor %}
 {% endif %}
 
-{% if selected_text %}
-# 待润色段落（仅润色此段）
+{% if is_selection %}
+# 整章上下文（仅供参考，不要润色此部分）
+---
+{{ chapter_content }}
+---
+
+# 待润色段落（仅润色以下文字）
 ---
 {{ selected_text }}
 ---
 
-请润色上述段落。直接输出润色后的文字。
+{% if direction %}用户希望：{{ direction }}{% endif %}
+
+请基于整章上下文润色上述段落，输出 2 个风格不同的版本。
 {% else %}
 # 待润色章节正文
 ---
 {{ chapter_content }}
 ---
 
-请润色上述整章正文。直接输出润色后的文字。
+{% if direction %}用户希望：{{ direction }}{% endif %}
+
+请润色上述整章正文，输出 1 个版本。
 {% endif %}

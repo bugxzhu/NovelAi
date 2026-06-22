@@ -3,9 +3,15 @@
 Flow:
     1. Resolve chapter → fetch chapter.content + last_involved_character_ids.
     2. assemble_context(db, chapter_id, ...) → lighter writing context bundle.
-    3. render polish/system.j2 + user.j2.
+    3. render polish/system.j2 + user.j2. The prompts get:
+       - selected_text ("" for whole-chapter polish)
+       - chapter_content (ALWAYS sent; acts as style context for selection mode
+         AND as the polish target for whole-chapter mode)
+       - direction (user-provided polish direction; "" = none)
+       - is_selection (drives JSON output format: 2 versions vs 1 version)
     4. router.complete(request)  # single call.
-    5. Validate plain-text response (non-empty, not truncated by max_tokens).
+    5. Parse JSON {"versions": [...]} with tolerance (fall back to treating
+       response.text as single version if JSON parse fails).
     6. INSERT generation_logs (model_task='polish').
 
 Race contract:
@@ -14,6 +20,7 @@ Race contract:
     writes (generation_logs INSERT), not isolation from concurrent mutations to
     related rows.
 """
+import json
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -36,8 +43,9 @@ def _now() -> datetime:
 
 @dataclass
 class PolishResult:
-    polished_text: str
+    polished_texts: list[str]
     is_selection: bool
+    direction: str
     log_id: int
 
 
@@ -46,17 +54,29 @@ def polish_chapter(
     *,
     chapter_id: int,
     selected_text: str | None = None,
+    direction: str = "",
     router: ModelRouter = default_router,
 ) -> PolishResult:
-    """Polish existing text. If selected_text is provided, polish that passage;
-    otherwise polish the entire chapter content.
+    """Polish existing text. Returns 2 versions for selection, 1 for whole chapter.
 
-    Returns plain polished text (not JSON).
+    For selection mode (selected_text provided & non-empty):
+        - LLM is shown BOTH chapter_content (style context) AND selected_text
+          (the passage to actually rewrite).
+        - Output is JSON {"versions": ["v1", "v2"]} (2 distinct versions).
+
+    For whole-chapter mode (no selected_text):
+        - LLM polishes the entire chapter_content.
+        - Output is JSON {"versions": ["v1"]} (1 version).
+
+    JSON parse is tolerant: if the LLM does not return valid JSON, the raw
+    response is wrapped into a single-element list as fallback.
 
     Raises:
         ChapterNotFoundError: chapter does not exist.
         PolishError: LLM returned empty response or hit max_tokens.
     """
+    is_selection = selected_text is not None and selected_text.strip() != ""
+
     # assemble_context does not return chapter; fetch directly so we can pass
     # chapter.content to the prompt. Also resolve involved characters from the
     # chapter's last_involved_character_ids so the LLM gets character context.
@@ -73,7 +93,11 @@ def polish_chapter(
         involved_character_ids=involved_ids,
     )
 
-    system_prompt = render("polish/system.j2")
+    system_prompt = render(
+        "polish/system.j2",
+        direction=direction,
+        is_selection=is_selection,
+    )
     user_prompt = render(
         "polish/user.j2",
         project=bundle.project,
@@ -85,6 +109,8 @@ def polish_chapter(
         milestones=bundle.milestones,
         selected_text=selected_text or "",
         chapter_content=chapter.content or "",
+        direction=direction,
+        is_selection=is_selection,
     )
 
     request = LLMRequest(
@@ -98,23 +124,44 @@ def polish_chapter(
     _, model_name = router.resolve_model("writer_long")
     response = router.complete(request)
 
-    polished = (response.text or "").strip()
-    if not polished:
-        raise PolishError("LLM returned empty response")
     if response.stop_reason == "max_tokens":
         raise PolishError("LLM hit max_tokens; output likely truncated")
+
+    raw = (response.text or "").strip()
+    if not raw:
+        raise PolishError("LLM returned empty response")
+
+    # Try JSON parse first ({"versions": ["...", "..."]}).
+    polished_texts: list[str] = []
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            versions = parsed.get("versions") or parsed.get("polished_texts") or []
+            if isinstance(versions, list):
+                polished_texts = [
+                    v.strip() for v in versions
+                    if isinstance(v, str) and v.strip()
+                ]
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: treat entire response as single version.
+    if not polished_texts:
+        polished_texts = [raw]
 
     log = GenerationLog(
         chapter_id=chapter_id,
         project_id=chapter.project_id,
         beat_text="(polish)",
-        instruction=selected_text or "(whole chapter)",
+        instruction=direction or selected_text or "(whole chapter)",
         involved_character_ids=involved_ids,
         location_id=None,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         context_summary={
-            "is_selection": selected_text is not None,
+            "is_selection": is_selection,
+            "direction": direction,
+            "num_versions": len(polished_texts),
             "characters": len(bundle.characters),
             "relationships": len(bundle.relationships),
         },
@@ -138,7 +185,8 @@ def polish_chapter(
         raise
 
     return PolishResult(
-        polished_text=polished,
-        is_selection=selected_text is not None,
+        polished_texts=polished_texts,
+        is_selection=is_selection,
+        direction=direction,
         log_id=log.id,
     )

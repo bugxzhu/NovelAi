@@ -25,6 +25,7 @@ def polish(
         result = polish_chapter(
             db, chapter_id=chapter_id,
             selected_text=body.selected_text,
+            direction=body.direction,
             router=default_router,
         )
     except ChapterNotFoundError:
@@ -37,7 +38,8 @@ def polish(
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"llm call failed: {e}")
     return PolishResponse(
-        polished_text=result.polished_text,
+        polished_texts=result.polished_texts,
         is_selection=result.is_selection,
+        direction=result.direction,
         log_id=result.log_id,
     )
