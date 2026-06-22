@@ -28,3 +28,7 @@ class ExtractionError(Exception):
 
 class ReviewError(Exception):
     """LLM review failed (invalid JSON, missing issues_by_category, max_tokens, etc.)."""
+
+
+class DiscussError(Exception):
+    """LLM discuss failed (invalid JSON, max_tokens, etc.)."""
