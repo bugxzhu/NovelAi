@@ -168,7 +168,7 @@ export function ChapterEditor({
       )}
       <ReviewModal chapterId={chapter.id} editor={editor} />
       <DiscussModal chapterId={chapter.id} />
-      <PolishModal editor={editor} />
+      <PolishModal chapterId={chapter.id} editor={editor} />
     </div>
   );
 }

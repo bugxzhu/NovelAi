@@ -253,37 +253,41 @@ export const useDiscussStore = create<DiscussState>((set) => ({
 export { EMPTY_DISCUSS };
 
 // === Polish ===
-// Polish results are ephemeral per-session. The button captures the editor's
-// selection range (from/to) before the API call so the modal can replace that
-// exact range on Accept. For whole-chapter polish (no selection), Accept calls
-// editor.commands.setContent(polished_text).
+// Polish flow: PolishButton only OPENS the modal (no API call) — like Discuss,
+// polish now takes a user direction input before the LLM call. The button
+// captures the editor's selection range (from/to) at click time so the modal
+// can replace that exact range on Accept. For whole-chapter polish (no
+// selection), Accept calls editor.commands.setContent(polishedTexts[i]).
+//
+// All fields prefixed with "polish" to avoid collisions with other stores
+// (Discuss uses `selectedText`, Review uses `modalOpen`).
 interface PolishState {
-  result: PolishResponse | null;
-  modalOpen: boolean;
-  selectedText: string;
+  polishResult: PolishResponse | null;
+  polishModalOpen: boolean;
+  polishSelectedText: string;
   // ProseMirror positions for the selection captured at click time. Null when
   // the polish was whole-chapter (no selection) OR before any click.
-  selectionFrom: number | null;
-  selectionTo: number | null;
-  setResult: (result: PolishResponse) => void;
-  setSelectionRange: (from: number, to: number) => void;
-  closeModal: () => void;
+  polishSelectionFrom: number | null;
+  polishSelectionTo: number | null;
+  setPolishOpen: (open: boolean) => void;
+  setPolishResult: (result: PolishResponse) => void;
+  closePolishModal: () => void;
 }
 
 export const usePolishStore = create<PolishState>((set) => ({
-  result: null,
-  modalOpen: false,
-  selectedText: "",
-  selectionFrom: null,
-  selectionTo: null,
-  setResult: (result) => set({ result, modalOpen: true }),
-  setSelectionRange: (from, to) => set({ selectionFrom: from, selectionTo: to }),
-  closeModal: () =>
+  polishResult: null,
+  polishModalOpen: false,
+  polishSelectedText: "",
+  polishSelectionFrom: null,
+  polishSelectionTo: null,
+  setPolishOpen: (open) => set({ polishModalOpen: open, polishResult: null }),
+  setPolishResult: (result) => set({ polishResult: result }),
+  closePolishModal: () =>
     set({
-      result: null,
-      modalOpen: false,
-      selectedText: "",
-      selectionFrom: null,
-      selectionTo: null,
+      polishResult: null,
+      polishModalOpen: false,
+      polishSelectedText: "",
+      polishSelectionFrom: null,
+      polishSelectionTo: null,
     }),
 }));

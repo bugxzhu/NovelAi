@@ -542,10 +542,12 @@ export interface DiscussResponse {
 
 export interface PolishRequest {
   selected_text?: string | null;
+  direction?: string;
 }
 
 export interface PolishResponse {
-  polished_text: string;
+  polished_texts: string[];
   is_selection: boolean;
+  direction: string;
   log_id: number;
 }

@@ -146,10 +146,13 @@ export const api = {
     }),
 
   // Polish
-  polishChapter: (chapterId: number, selectedText?: string) =>
+  polishChapter: (chapterId: number, selectedText?: string, direction?: string) =>
     http<PolishResponse>(`/api/chapters/${chapterId}/polish`, {
       method: "POST",
-      body: JSON.stringify({ selected_text: selectedText || null } as PolishRequest),
+      body: JSON.stringify({
+        selected_text: selectedText || null,
+        direction: direction || "",
+      } as PolishRequest),
     }),
 
   // M3c-B: Character States
