@@ -363,3 +363,29 @@ class PlotLine(Base):
     __table_args__ = (
         Index("idx_plot_lines_project", "project_id", "status"),
     )
+
+
+class StoryMilestone(Base):
+    """Milestone in the novel's overall arc. M4b-1: manually managed
+    (no extraction). All milestones are injected into Writer + Reviewer
+    context so they see the full story blueprint."""
+    __tablename__ = "story_milestones"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    type: Mapped[str] = mapped_column(Text, nullable=False, default="里程碑")
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    chapter_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chapter_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="planned")
+
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+    updated_at: Mapped[datetime] = mapped_column(default=_now_utc, onupdate=_now_utc)
+
+    __table_args__ = (
+        Index("idx_milestones_project", "project_id", "order_index"),
+    )
