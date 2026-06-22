@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { useChapter, useUpdateChapter } from "@/lib/queries";
 import { useDiscussStore } from "@/lib/store";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
-import type { DiscussResponse } from "@/lib/types";
+import type { DiscussBranch, DiscussResponse } from "@/lib/types";
 
 // Two-state modal:
 // 1. Input state (no result yet): question textarea + "推演 →" button
@@ -25,7 +26,25 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { data: chapter } = useChapter(chapterId);
+  const updateChapter = useUpdateChapter(chapterId, chapter?.project_id ?? 0);
+
   if (!isOpen) return null;
+
+  const handleSelectBranch = async (branch: DiscussBranch) => {
+    const currentOutline = chapter?.outline ?? "";
+    const beatText = `【${branch.title}】${branch.summary}`;
+    const newOutline = currentOutline
+      ? `${currentOutline}\n\n${beatText}`
+      : beatText;
+    try {
+      await updateChapter.mutateAsync({ outline: newOutline });
+      toast(`已将分支 ${branch.label}（${branch.title}）写入大纲`, "success");
+      close();
+    } catch (e) {
+      toast(`写入大纲失败: ${(e as Error).message}`, "error");
+    }
+  };
 
   const handleDiscuss = async () => {
     if (!question.trim()) {
@@ -126,6 +145,15 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
                         <div><span className="text-text-muted-bright">冲突：</span>{branch.conflicts}</div>
                         <div><span className="text-text-muted-bright">机会：</span>{branch.opportunities}</div>
                         <div><span className="text-text-muted-bright">人物：</span>{branch.character_impact}</div>
+                      </div>
+                      <div className="mt-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSelectBranch(branch)}
+                          disabled={updateChapter.isPending}
+                        >
+                          选用此分支 →
+                        </Button>
                       </div>
                     </div>
                   );

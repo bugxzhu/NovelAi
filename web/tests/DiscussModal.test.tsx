@@ -9,6 +9,10 @@ vi.mock("@/lib/api", () => ({
   ApiError: class {},
 }));
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => vi.fn() }));
+vi.mock("@/lib/queries", () => ({
+  useChapter: () => ({ data: { id: 5, project_id: 1, outline: "", content: "" } }),
+  useUpdateChapter: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
+}));
 
 const mockResult: DiscussResponse = {
   question: "如果？",
