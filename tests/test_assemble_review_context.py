@@ -192,3 +192,19 @@ def test_assemble_review_context_includes_active_plot_lines(db_session):
     bundle = assemble_review_context(db_session, chapter_id=ch.id)
     titles = {pl.title for pl in bundle.plot_lines}
     assert "主线" in titles
+
+
+def test_assemble_review_context_includes_milestones(db_session):
+    from app.memory.retrieval import assemble_review_context
+    from app.memory.schema import StoryMilestone
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    db_session.add(StoryMilestone(project_id=p.id, order_index=1, title="转折"))
+    db_session.commit()
+
+    bundle = assemble_review_context(db_session, chapter_id=ch.id)
+    assert len(bundle.milestones) == 1
+    assert bundle.milestones[0].title == "转折"

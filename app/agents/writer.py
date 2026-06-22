@@ -153,6 +153,7 @@ def prepare_generation(
         beat_text=beat_text,
         instruction=instruction,
         retrieved_chunks=retrieved,  # M3b new
+        milestones=bundle.milestones,  # M4b-1 new
     )
 
     _, model_name = router.resolve_model(model_task)

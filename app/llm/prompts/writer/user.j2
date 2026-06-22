@@ -39,6 +39,13 @@
 {% endfor %}
 {% endif %}
 
+{% if milestones %}
+# 故事蓝图
+{% for m in milestones %}
+- [{{ m.status }}] {{ m.title }}（{{ m.type }}，第 {{ m.chapter_start or "?" }}-{% if m.chapter_end %}{{ m.chapter_end }}{% else %}?{% endif %} 章）：{{ m.description }}
+{% endfor %}
+{% endif %}
+
 {% if faction_lore or location_lore %}
 # 场景设定
 {% if location_lore %}

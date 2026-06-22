@@ -73,6 +73,7 @@ def review_chapter(
         lore_entries=bundle.lore_entries,
         plot_lines=bundle.plot_lines,
         recent_chapter_summaries=bundle.recent_chapter_summaries,
+        milestones=bundle.milestones,  # M4b-1 new
     )
 
     request = LLMRequest(

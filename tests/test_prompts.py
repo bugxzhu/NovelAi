@@ -66,6 +66,7 @@ def test_render_user_full():
         beat_text="主角遇旧友",
         instruction="氛围压抑",
         retrieved_chunks=[],
+        milestones=[],
     )
     assert "TestNovel" in out
     assert "Medieval" in out
@@ -90,6 +91,7 @@ def test_render_user_minimal_no_world_no_lore_no_recent():
         beat_text="x",
         instruction="",
         retrieved_chunks=[],
+        milestones=[],
     )
     assert "TestNovel" in out
     assert "Li" in out
@@ -117,6 +119,7 @@ def test_render_user_empty_characters_list():
         beat_text="x",
         instruction="",
         retrieved_chunks=[],
+        milestones=[],
     )
     assert "TestNovel" in out
     assert "x" in out
@@ -140,6 +143,26 @@ def test_render_writer_user_has_plot_lines():
                  recent_chapter_summaries=[],
                  retrieved_chunks=[],
                  beat_text="x",
-                 instruction="")
+                 instruction="",
+                 milestones=[])
     assert "当前情节线" in out
     assert "复仇之路" in out
+
+
+def test_render_writer_user_has_milestones():
+    """writer/user.j2 renders milestones section."""
+    from types import SimpleNamespace
+    m = SimpleNamespace(status="planned", title="真相揭示", type="转折",
+                        chapter_start=5, chapter_end=7, description="关键转折")
+    out = render("writer/user.j2",
+                 project=SimpleNamespace(title="T", genre="g", main_theme="m",
+                                         tone="t", premise="p"),
+                 world_overview=None,
+                 characters=[], character_states={}, relationships=[],
+                 lore_entries=[], faction_lore=[], location_lore=[],
+                 plot_lines=[],
+                 milestones=[m],
+                 recent_chapter_summaries=[], retrieved_chunks=[],
+                 beat_text="x", instruction="")
+    assert "故事蓝图" in out
+    assert "真相揭示" in out

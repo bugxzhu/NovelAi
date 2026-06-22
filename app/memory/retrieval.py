@@ -54,6 +54,7 @@ class ContextBundle:
     plot_lines: list[Any]  # M3 will replace with list[PlotLine]
     recent_chapter_summaries: list[ChapterSummary]
     retrieved_chunks: list[Any] = field(default_factory=list)  # M3b: list[RetrievedChunk]
+    milestones: list[Any] = field(default_factory=list)  # M4b-1: list[StoryMilestone]
 
 
 def _fetch_location_with_ancestors(
@@ -181,6 +182,14 @@ def assemble_context(
         )
     ))
 
+    # M4b-1: inject ALL milestones (full story blueprint)
+    from app.memory.schema import StoryMilestone
+    all_milestones = list(db.scalars(
+        select(StoryMilestone).where(
+            StoryMilestone.project_id == project_id,
+        ).order_by(StoryMilestone.order_index)
+    ))
+
     return ContextBundle(
         project=project,
         world_overview=world_overview,
@@ -195,6 +204,7 @@ def assemble_context(
         location_lore=location_lore,
         plot_lines=active_plot_lines,
         recent_chapter_summaries=recent_chapter_summaries,
+        milestones=all_milestones,
     )
 
 
@@ -212,6 +222,7 @@ class ReviewContextBundle:
     lore_entries: list[LoreEntry]
     plot_lines: list[Any]  # M3c-D: list[PlotLine]; use Any to avoid circular import
     recent_chapter_summaries: list[ChapterSummary]
+    milestones: list[Any] = field(default_factory=list)  # M4b-1: list[StoryMilestone]
 
 
 def _target_has_external_payoff(
@@ -371,6 +382,14 @@ def assemble_review_context(
         )
     ))
 
+    # M4b-1: inject ALL milestones (full story blueprint)
+    from app.memory.schema import StoryMilestone
+    all_milestones = list(db.scalars(
+        select(StoryMilestone).where(
+            StoryMilestone.project_id == project_id,
+        ).order_by(StoryMilestone.order_index)
+    ))
+
     # All chapter summaries except current
     recent_chapter_summaries = [
         ChapterSummary(c.id, c.order_index, c.title, c.summary)
@@ -384,4 +403,5 @@ def assemble_review_context(
         relationships=relationships, events=events_view, lore_entries=lore_entries,
         plot_lines=active_plot_lines,
         recent_chapter_summaries=recent_chapter_summaries,
+        milestones=all_milestones,
     )

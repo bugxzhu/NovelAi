@@ -39,6 +39,7 @@ def test_render_reviewer_user_minimal():
         lore_entries=[],
         plot_lines=[],
         recent_chapter_summaries=[],
+        milestones=[],
     )
     assert "C3" in out
     assert "正文..." in out
@@ -82,6 +83,7 @@ def test_render_reviewer_user_full():
         lore_entries=[lore],
         plot_lines=[],
         recent_chapter_summaries=[summary],
+        milestones=[],
     )
     assert "李雷" in out
     assert "仇人" in out
@@ -108,6 +110,28 @@ def test_render_reviewer_user_has_plot_lines():
         lore_entries=[],
         plot_lines=[pl],
         recent_chapter_summaries=[],
+        milestones=[],
     )
     assert "当前情节线" in out
     assert "复仇之路" in out
+
+
+def test_render_reviewer_user_has_milestones():
+    """reviewer/user.j2 renders milestones section."""
+    from types import SimpleNamespace
+    m = SimpleNamespace(status="planned", title="真相揭示", type="转折",
+                        chapter_start=5, chapter_end=7, description="关键转折")
+    out = render(
+        "reviewer/user.j2",
+        project=SimpleNamespace(title="T", genre="g", main_theme="m",
+                                tone="t", premise="p"),
+        world_overview=None,
+        chapter=SimpleNamespace(order_index=1, title="C1", content="正文"),
+        characters=[], character_states_history={},
+        relationships=[], events=[], lore_entries=[],
+        plot_lines=[],
+        milestones=[m],
+        recent_chapter_summaries=[],
+    )
+    assert "故事蓝图" in out
+    assert "真相揭示" in out

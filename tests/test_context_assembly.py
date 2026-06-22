@@ -340,3 +340,29 @@ def test_assemble_context_excludes_non_active(db_session):
         involved_character_ids=[],
     )
     assert bundle.plot_lines == []
+
+
+def test_assemble_context_includes_milestones(db_session):
+    """assemble_context injects all milestones into ContextBundle."""
+    from app.memory.retrieval import assemble_context
+    from app.memory.schema import Chapter, Project, StoryMilestone
+
+    p = Project(title="T", genre="", premise="")
+    db_session.add(p); db_session.flush()
+    ch = Chapter(project_id=p.id, order_index=1, title="C1", content="x")
+    db_session.add(ch); db_session.flush()
+    db_session.add(StoryMilestone(project_id=p.id, order_index=1,
+                                  title="激励事件", type="转折",
+                                  chapter_start=1, chapter_end=3))
+    db_session.add(StoryMilestone(project_id=p.id, order_index=2,
+                                  title="高潮", type="高潮",
+                                  chapter_start=8, chapter_end=10))
+    db_session.commit()
+
+    bundle = assemble_context(
+        db_session, chapter_id=ch.id, beat_text="x",
+        involved_character_ids=[],
+    )
+    assert len(bundle.milestones) == 2
+    assert bundle.milestones[0].title == "激励事件"
+    assert bundle.milestones[1].title == "高潮"
