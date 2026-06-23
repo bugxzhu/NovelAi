@@ -17,6 +17,7 @@ import type {
   EventCreate, EventUpdate, EventFilter,
   PlotLineCreate, PlotLineUpdate, PlotLineStatus,
   StoryMilestoneCreate, StoryMilestoneUpdate,
+  GenreTemplate,
 } from "./types";
 
 // Projects
@@ -426,5 +427,15 @@ export function useDeleteStoryMilestone(projectId: number) {
   return useMutation({
     mutationFn: (id: number) => api.deleteStoryMilestone(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["story-milestones", projectId] }),
+  });
+}
+
+// === Genre Templates ===
+
+export function useGenreTemplates() {
+  return useQuery({
+    queryKey: ["genre-templates"],
+    queryFn: () => api.listGenreTemplates(),
+    staleTime: Infinity, // static data, never changes within session
   });
 }

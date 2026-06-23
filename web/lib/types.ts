@@ -551,3 +551,16 @@ export interface PolishResponse {
   direction: string;
   log_id: number;
 }
+
+// === Genre Templates ===
+
+export interface GenreTemplate {
+  label: string;
+  description: string;
+  world_defaults: {
+    power_system: string;
+    rules_and_taboos: string;
+  };
+  character_archetypes: string[];
+  plot_templates: string[];
+}

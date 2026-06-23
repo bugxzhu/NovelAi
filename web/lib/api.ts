@@ -15,6 +15,7 @@ import type {
   Issue, ReviewResponse,
   DiscussBranch, DiscussRequest, DiscussResponse,
   PolishRequest, PolishResponse,
+  GenreTemplate,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -228,4 +229,8 @@ export const api = {
     http<StoryMilestone>(`/api/story-milestones/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteStoryMilestone: (id: number) =>
     http<void>(`/api/story-milestones/${id}`, { method: "DELETE" }),
+
+  // Genre Templates
+  listGenreTemplates: () =>
+    http<Record<string, GenreTemplate>>("/api/genre-templates"),
 };
