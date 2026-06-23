@@ -21,3 +21,6 @@ data/*.db-wal
 # OS
 .DS_Store
 .superpowers/
+
+# Dev artifacts
+dev.db
