@@ -29,6 +29,30 @@ const SEVERITY_ICON: Record<Severity, string> = {
 // avoiding unnecessary re-renders of consumers.
 const EMPTY_ISSUES: Issue[] = [];
 
+/**
+ * Find searchText inside the ProseMirror doc, scanning each text node directly.
+ * Returns exact {from, to} positions (no getText()-newline conversion).
+ * Returns null if the text isn't found within a single text node.
+ */
+function findTextInDoc(
+  editor: Editor,
+  searchText: string,
+): { from: number; to: number } | null {
+  let result: { from: number; to: number } | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (result) return false;
+    if (!node.isText) return true;
+    const text = node.text || "";
+    const idx = text.indexOf(searchText);
+    if (idx >= 0) {
+      result = { from: pos + idx, to: pos + idx + searchText.length };
+      return false;
+    }
+    return true;
+  });
+  return result;
+}
+
 export function ReviewModal({
   chapterId,
   editor,
@@ -56,25 +80,17 @@ export function ReviewModal({
 
     if (!issues.length) return;
 
-    const fullText = ed.getText();
     issues.forEach((issue, idx) => {
       if (!issue.location) return;
-      const idxInText = fullText.indexOf(issue.location);
-      if (idxInText < 0) return;  // graceful degrade
-      // NOTE: text offset → ProseMirror pos conversion is approximate.
-      // TipTap's getText() concatenates block nodes with newlines; the resulting
-      // offset is close to but not exactly the ProseMirror document position.
-      // For simple paragraph-based chapters this works well; complex block
-      // structures (lists, blockquotes) may shift by a few positions.
-      const from = idxInText + 1;  // ProseMirror is 1-indexed
-      const to = from + issue.location.length;
+      const range = findTextInDoc(ed, issue.location);
+      if (!range) return;  // graceful degrade: text not found in any single text node
       try {
         ed.commands.setIssueHighlight(
           { issueId: `${idx}`, severity: issue.severity },
-          from, to,
+          range.from, range.to,
         );
       } catch {
-        // Position out of range; skip silently (graceful degrade)
+        // Position out of range; skip silently
       }
     });
   }, [issues]);

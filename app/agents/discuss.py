@@ -64,6 +64,11 @@ def discuss_chapter(
     """
     bundle = assemble_review_context(db, chapter_id=chapter_id)
 
+    from app.memory.context_budget import trim_review_context
+    bundle, budget_info = trim_review_context(bundle)
+    if budget_info["actions"]:
+        logger.info("ContextBudget actions: %s", budget_info["actions"])
+
     from app.config.genre_templates import get_genre_template
     genre_template = get_genre_template(bundle.project.genre)
 
