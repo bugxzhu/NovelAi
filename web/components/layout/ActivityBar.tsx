@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { SettingsButton } from "@/components/layout/SettingsButton";
-import { usePendingCount } from "@/lib/queries";
+import { usePendingCount, useChapters } from "@/lib/queries";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
 
 const ITEMS = [
   { icon: "📚", label: "章节", path: "chapters", view: "chapters" as const },
@@ -24,6 +27,13 @@ export function ActivityBar({ projectId }: { projectId: number }) {
   const base = `/projects/${projectId}`;
   const isHome = pathname === "/";
   const { data: pendingCount } = usePendingCount(projectId);
+  const { data: chapters } = useChapters(projectId);
+  const [showExport, setShowExport] = useState(false);
+
+  const totalChars = (chapters ?? []).reduce((sum, ch) => {
+    return sum + (ch.content || "").replace(/\s/g, "").length;
+  }, 0);
+
   return (
     <aside className="w-10 bg-sidebar flex flex-col items-center py-2 gap-1 shrink-0">
       <button
@@ -61,6 +71,39 @@ export function ActivityBar({ projectId }: { projectId: number }) {
         );
       })}
       <div className="flex-1" />
+      <div className="relative">
+        <button
+          onClick={() => setShowExport(!showExport)}
+          title="导出 / 统计"
+          className="w-8 h-8 flex flex-col items-center justify-center rounded hover:bg-hover-strong text-text-muted"
+        >
+          <span className="text-base leading-none">📥</span>
+        </button>
+        {showExport && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
+            <div className="absolute bottom-0 left-full ml-1 z-50 bg-panel border border-line rounded shadow-lg p-3 w-48">
+              <div className="text-xs text-text-muted-bright mb-2 pb-2 border-b border-line">
+                {chapters?.length ?? 0} 章 · {totalChars.toLocaleString()} 字
+              </div>
+              <a
+                href={`${API_BASE}/api/projects/${projectId}/export?format=markdown`}
+                onClick={() => setShowExport(false)}
+                className="block text-sm text-text hover:bg-hover rounded px-2 py-1.5 mb-1"
+              >
+                📄 导出 Markdown
+              </a>
+              <a
+                href={`${API_BASE}/api/projects/${projectId}/export?format=txt`}
+                onClick={() => setShowExport(false)}
+                className="block text-sm text-text hover:bg-hover rounded px-2 py-1.5"
+              >
+                📄 导出 TXT
+              </a>
+            </div>
+          </>
+        )}
+      </div>
       <SettingsButton />
       <ThemeToggle />
     </aside>
