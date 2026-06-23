@@ -68,7 +68,9 @@ export default function EventsPage() {
               <ForeshadowMultiselect event={selected} allEvents={allEvents} />
             </div>
           ) : (
-            <div className="p-4 text-text-muted">请从左侧选择或新建事件</div>
+            <div className="p-4 text-text-muted">
+              还没有事件。完成一章后 AI 会自动抽取关键事件，或点击左侧&quot;+ 新建&quot;手动添加。
+            </div>
           )}
         </div>
       }

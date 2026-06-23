@@ -54,7 +54,9 @@ export default function OutlinePage() {
           {isLoading ? (
             <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : sorted.length === 0 ? (
-            <p className="text-xs text-text-muted p-2">还没有里程碑</p>
+            <p className="text-xs text-text-muted p-2">
+              还没有里程碑。点击&quot;+ 新建&quot;规划故事的关键转折点。
+            </p>
           ) : (
             sorted.map((m) => {
               const range = chapterRange(m);
@@ -87,7 +89,9 @@ export default function OutlinePage() {
           ) : selected ? (
             <MilestoneForm projectId={pid} milestone={selected} />
           ) : (
-            <div className="p-4 text-text-muted">请从左侧选择或新建里程碑</div>
+            <div className="p-4 text-text-muted">
+              请从左侧选择或新建里程碑，或点击&quot;+ 新建&quot;规划故事的关键转折点。
+            </div>
           )}
         </div>
       }

@@ -35,7 +35,9 @@ export default function CharactersPage() {
           {isLoading ? (
             <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : !characters || characters.length === 0 ? (
-            <p className="text-xs text-text-muted p-2">还没有人物</p>
+            <p className="text-xs text-text-muted p-2">
+              还没有人物。点击&quot;+ 新建&quot;创建角色，然后就可以在写作时让 AI 记住他们。
+            </p>
           ) : (
             characters.map((c) => (
               <button

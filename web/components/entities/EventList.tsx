@@ -56,7 +56,9 @@ export function EventList({
       </div>
 
       {sortedChapters.length === 0 ? (
-        <p className="text-xs text-text-muted p-2">还没有事件</p>
+        <p className="text-xs text-text-muted p-2">
+          还没有事件。完成一章后 AI 会自动抽取关键事件，或点击&quot;+ 新建&quot;手动添加。
+        </p>
       ) : (
         sortedChapters.map((order) => (
           <div key={order} className="mb-3">

@@ -88,7 +88,14 @@ export function PolishModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      tabIndex={-1}
+      autoFocus
+      onKeyDown={(e) => {
+        if (e.key === "Escape") closePolishModal();
+      }}
+    >
       <div className="bg-panel border border-line rounded max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-line">
           <h2 className="text-lg">

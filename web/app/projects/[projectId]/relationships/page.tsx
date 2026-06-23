@@ -37,7 +37,9 @@ export default function RelationshipsPage() {
           {isLoading ? (
             <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : !relationships || relationships.length === 0 ? (
-            <p className="text-xs text-text-muted p-2">还没有关系</p>
+            <p className="text-xs text-text-muted p-2">
+              还没有关系。点击&quot;+ 新建&quot;建立人物之间的关系（仇人/朋友/恋人等）。
+            </p>
           ) : (
             relationships.map((r) => (
               <button
@@ -74,7 +76,7 @@ export default function RelationshipsPage() {
               />
             </div>
           ) : (
-            <div className="p-4 text-text-muted">请从左侧选择或新建关系</div>
+            <div className="p-4 text-text-muted">请从左侧选择或新建关系，或点击&quot;+ 新建&quot;建立第一条关系。</div>
           )}
         </div>
       }

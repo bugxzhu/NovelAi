@@ -77,7 +77,9 @@ export default function LorePage() {
               {worldOverview ? "点右侧编辑" : "右侧创建"}
             </p>
           ) : filtered.length === 0 ? (
-            <p className="text-xs text-text-muted p-2">无</p>
+            <p className="text-xs text-text-muted p-2">
+              还没有设定。点击&quot;+ 新建&quot;添加地点、势力、物品等，让 AI 的世界更丰富。
+            </p>
           ) : (
             filtered.map((l) => (
               <button

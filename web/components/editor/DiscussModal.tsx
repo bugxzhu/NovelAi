@@ -80,7 +80,14 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      tabIndex={-1}
+      autoFocus
+      onKeyDown={(e) => {
+        if (e.key === "Escape") close();
+      }}
+    >
       <div className="bg-panel border border-line rounded max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-line">
           <h2 className="text-lg">💬 情节探讨</h2>
@@ -106,11 +113,18 @@ export function DiscussModal({ chapterId }: { chapterId: number }) {
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  handleDiscuss();
+                }
+              }}
               placeholder="如果让李雷在这里和韩梅梅和解？"
               rows={2}
               className="w-full bg-input border border-line rounded p-2 text-text"
             />
-            <div className="flex justify-end mt-2">
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-xs text-text-dim">Ctrl+Enter 快速推演 · Esc 关闭</span>
               <Button
                 variant="primary"
                 onClick={handleDiscuss}

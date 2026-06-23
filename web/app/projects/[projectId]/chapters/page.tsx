@@ -60,7 +60,9 @@ export default function ChaptersListPage() {
           {isLoading ? (
             <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : !chapters || chapters.length === 0 ? (
-            <p className="text-xs text-text-muted p-2">还没有章节</p>
+            <p className="text-xs text-text-muted p-2">
+              还没有章节。点击&quot;+ 新建&quot;创建第一章，写一段大纲后用 ⚡ 生成。
+            </p>
           ) : (
             chapters
               .slice()

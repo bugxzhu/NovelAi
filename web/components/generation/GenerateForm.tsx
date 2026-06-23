@@ -58,12 +58,23 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
         <textarea
           value={beatText}
           onChange={(e) => setBeatText(chapterId, e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+              e.preventDefault();
+              if (!isStreaming && beatText.trim() && involvedCharacterIds.length > 0) {
+                handleSubmit();
+              }
+            }
+          }}
           placeholder="例：李雷推开残月酒馆的门，看见多年未见的韩梅在角落等候"
           rows={3}
           maxLength={2000}
           className="w-full bg-input border border-line rounded p-2 text-text"
         />
-        <div className="text-xs text-text-dim mt-1">{beatText.length}/2000</div>
+        <div className="text-xs text-text-dim mt-1 flex justify-between">
+          <span>{beatText.length}/2000</span>
+          <span>Ctrl+Enter 快速生成</span>
+        </div>
       </div>
 
       <div>

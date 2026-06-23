@@ -18,15 +18,17 @@ export function EditorToolbar({
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-panel">
-      <span className="text-sm text-text truncate max-w-md">{title || "未命名章节"}</span>
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-text-muted">{charCount} 字</span>
-        {extraActions}
+      <span className="text-sm text-text truncate max-w-[40%]">{title || "未命名章节"}</span>
+      <div className="flex items-center gap-3 flex-wrap justify-end">
+        <span className="text-xs text-text-muted whitespace-nowrap flex-shrink-0">
+          {charCount} 字
+        </span>
+        <div className="flex items-center gap-1 flex-wrap">{extraActions}</div>
         {onDelete && (
           <button
             onClick={onDelete}
             title="删除章节"
-            className="text-xs text-text-muted hover:text-text"
+            className="text-xs text-text-muted hover:text-text flex-shrink-0"
           >
             🗑️
           </button>

@@ -43,7 +43,9 @@ export default function PlotLinesPage() {
           {isLoading ? (
             <p className="text-xs text-text-muted p-2">加载中...</p>
           ) : !plotLines || plotLines.length === 0 ? (
-            <p className="text-xs text-text-muted p-2">还没有情节线</p>
+            <p className="text-xs text-text-muted p-2">
+              还没有情节线。点击&quot;+ 新建&quot;规划主线和支线。
+            </p>
           ) : (
             plotLines.map((pl) => (
               <button
@@ -72,7 +74,9 @@ export default function PlotLinesPage() {
           ) : selected ? (
             <PlotLineForm projectId={pid} plotLine={selected} />
           ) : (
-            <div className="p-4 text-text-muted">请从左侧选择或新建情节线</div>
+            <div className="p-4 text-text-muted">
+              请从左侧选择或新建情节线，或点击&quot;+ 新建&quot;规划主线/支线。
+            </div>
           )}
         </div>
       }
