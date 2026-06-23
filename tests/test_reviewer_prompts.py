@@ -40,6 +40,7 @@ def test_render_reviewer_user_minimal():
         plot_lines=[],
         recent_chapter_summaries=[],
         milestones=[],
+        genre_template=None,
     )
     assert "C3" in out
     assert "正文..." in out
@@ -84,6 +85,7 @@ def test_render_reviewer_user_full():
         plot_lines=[],
         recent_chapter_summaries=[summary],
         milestones=[],
+        genre_template=None,
     )
     assert "李雷" in out
     assert "仇人" in out
@@ -111,6 +113,7 @@ def test_render_reviewer_user_has_plot_lines():
         plot_lines=[pl],
         recent_chapter_summaries=[],
         milestones=[],
+        genre_template=None,
     )
     assert "当前情节线" in out
     assert "复仇之路" in out
@@ -132,6 +135,7 @@ def test_render_reviewer_user_has_milestones():
         plot_lines=[],
         milestones=[m],
         recent_chapter_summaries=[],
+        genre_template=None,
     )
     assert "故事蓝图" in out
     assert "真相揭示" in out

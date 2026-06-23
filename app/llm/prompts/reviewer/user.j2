@@ -5,6 +5,10 @@
 基调：{{ project.tone }}
 核心设定：{{ project.premise }}
 
+{% if genre_template %}
+# 类型审稿标准（{{ genre_template.label }}）
+{{ genre_template.reviewer_criteria }}
+{% endif %}
 {% if world_overview %}
 # 世界观
 - 时代：{{ world_overview.setting_era }}

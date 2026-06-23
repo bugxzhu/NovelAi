@@ -60,6 +60,9 @@ def review_chapter(
     """
     bundle = assemble_review_context(db, chapter_id=chapter_id)
 
+    from app.config.genre_templates import get_genre_template
+    genre_template = get_genre_template(bundle.project.genre)
+
     system_prompt = render("reviewer/system.j2")
     user_prompt = render(
         "reviewer/user.j2",
@@ -74,6 +77,7 @@ def review_chapter(
         plot_lines=bundle.plot_lines,
         recent_chapter_summaries=bundle.recent_chapter_summaries,
         milestones=bundle.milestones,  # M4b-1 new
+        genre_template=genre_template,
     )
 
     request = LLMRequest(

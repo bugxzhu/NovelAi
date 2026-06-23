@@ -49,6 +49,7 @@ def test_render_user_full():
         existing_lore=[_fake_lore()],
         existing_relationships=[],
         rejected_suggestions=[],
+        genre_template=None,
     )
     assert "夜行记" in out
     assert "李雷" in out
@@ -65,6 +66,7 @@ def test_render_user_minimal_no_entities():
         existing_lore=[],
         existing_relationships=[],
         rejected_suggestions=[],
+        genre_template=None,
     )
     assert "夜行记" in out
     # Empty loops should not raise
@@ -127,7 +129,8 @@ def test_user_prompt_shows_current_state_for_existing_characters():
                  existing_characters=chars,
                  existing_lore=[],
                  existing_relationships=[],
-                 rejected_suggestions=[])
+                 rejected_suggestions=[],
+                 genre_template=None)
     assert "现状=警惕" in out
     assert "现状=(未记录)" in out  # empty current_state placeholder
 
@@ -167,7 +170,8 @@ def test_user_prompt_lists_existing_relationships():
                  existing_characters=chars,
                  existing_lore=[],
                  existing_relationships=existing_rels,
-                 rejected_suggestions=[])
+                 rejected_suggestions=[],
+                 genre_template=None)
     assert "已有关系" in out
     assert "李雷 → 韩梅" in out
     assert "旧友" in out
@@ -201,7 +205,8 @@ def test_render_extractor_user_rejected_suggestions():
                  existing_characters=chars,
                  existing_lore=[],
                  existing_relationships=[],
-                 rejected_suggestions=rejected)
+                 rejected_suggestions=rejected,
+                 genre_template=None)
     assert "已拒绝" in out
     assert "人物：韩梅" in out
     assert "设定：残月酒馆" in out
@@ -220,5 +225,6 @@ def test_render_extractor_user_empty_rejected():
                  existing_characters=chars,
                  existing_lore=[],
                  existing_relationships=[],
-                 rejected_suggestions=[])
+                 rejected_suggestions=[],
+                 genre_template=None)
     assert "已拒绝" not in out

@@ -26,6 +26,7 @@ def test_render_discuss_user_minimal():
         recent_chapter_summaries=[],
         question="如果让李雷和韩梅和解？",
         selected_text="",
+        genre_template=None,
     )
     assert "如果让李雷和韩梅和解？" in out
     assert "正文" in out
@@ -61,6 +62,7 @@ def test_render_discuss_user_full():
         recent_chapter_summaries=[],
         question="如果？",
         selected_text="",
+        genre_template=None,
     )
     assert "李雷" in out
     assert "复仇" in out

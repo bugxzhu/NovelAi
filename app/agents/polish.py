@@ -93,6 +93,9 @@ def polish_chapter(
         involved_character_ids=involved_ids,
     )
 
+    from app.config.genre_templates import get_genre_template
+    genre_template = get_genre_template(bundle.project.genre)
+
     system_prompt = render(
         "polish/system.j2",
         direction=direction,
@@ -111,6 +114,7 @@ def polish_chapter(
         chapter_content=chapter.content or "",
         direction=direction,
         is_selection=is_selection,
+        genre_template=genre_template,
     )
 
     request = LLMRequest(

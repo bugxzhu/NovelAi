@@ -64,6 +64,9 @@ def discuss_chapter(
     """
     bundle = assemble_review_context(db, chapter_id=chapter_id)
 
+    from app.config.genre_templates import get_genre_template
+    genre_template = get_genre_template(bundle.project.genre)
+
     system_prompt = render("discuss/system.j2")
     user_prompt = render(
         "discuss/user.j2",
@@ -80,6 +83,7 @@ def discuss_chapter(
         recent_chapter_summaries=bundle.recent_chapter_summaries,
         question=question,
         selected_text=selected_text or "",
+        genre_template=genre_template,
     )
 
     request = LLMRequest(

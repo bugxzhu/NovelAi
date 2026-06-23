@@ -67,6 +67,7 @@ def test_render_user_full():
         instruction="氛围压抑",
         retrieved_chunks=[],
         milestones=[],
+        genre_template=None,
     )
     assert "TestNovel" in out
     assert "Medieval" in out
@@ -92,6 +93,7 @@ def test_render_user_minimal_no_world_no_lore_no_recent():
         instruction="",
         retrieved_chunks=[],
         milestones=[],
+        genre_template=None,
     )
     assert "TestNovel" in out
     assert "Li" in out
@@ -120,6 +122,7 @@ def test_render_user_empty_characters_list():
         instruction="",
         retrieved_chunks=[],
         milestones=[],
+        genre_template=None,
     )
     assert "TestNovel" in out
     assert "x" in out
@@ -144,7 +147,8 @@ def test_render_writer_user_has_plot_lines():
                  retrieved_chunks=[],
                  beat_text="x",
                  instruction="",
-                 milestones=[])
+                 milestones=[],
+                 genre_template=None)
     assert "当前情节线" in out
     assert "复仇之路" in out
 
@@ -163,6 +167,7 @@ def test_render_writer_user_has_milestones():
                  plot_lines=[],
                  milestones=[m],
                  recent_chapter_summaries=[], retrieved_chunks=[],
-                 beat_text="x", instruction="")
+                 beat_text="x", instruction="",
+                 genre_template=None)
     assert "故事蓝图" in out
     assert "真相揭示" in out

@@ -138,6 +138,9 @@ def prepare_generation(
     )
     bundle.retrieved_chunks = retrieved
 
+    from app.config.genre_templates import get_genre_template
+    genre_template = get_genre_template(bundle.project.genre)
+
     system_prompt = render("writer/system.j2")
     user_prompt = render(
         "writer/user.j2",
@@ -154,6 +157,7 @@ def prepare_generation(
         instruction=instruction,
         retrieved_chunks=retrieved,  # M3b new
         milestones=bundle.milestones,  # M4b-1 new
+        genre_template=genre_template,
     )
 
     _, model_name = router.resolve_model(model_task)

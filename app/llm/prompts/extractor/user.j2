@@ -2,6 +2,10 @@
 {{ project.title }} · {{ project.genre }}
 {{ project.premise }}
 
+{% if genre_template %}
+# 类型抽取提示（{{ genre_template.label }}）
+{{ genre_template.extractor_hints }}
+{% endif %}
 # 本章信息
 标题：{{ chapter.title }}
 正文：

@@ -498,6 +498,9 @@ def extract_chapter(
                 "note": rp.decision_note or "",
             })
 
+    from app.config.genre_templates import get_genre_template
+    genre_template = get_genre_template(project.genre)
+
     system_prompt = render("extractor/system.j2")
     user_prompt = render(
         "extractor/user.j2",
@@ -507,6 +510,7 @@ def extract_chapter(
         existing_lore=existing_lore,
         existing_relationships=existing_relationships_view,
         rejected_suggestions=rejected_suggestions,
+        genre_template=genre_template,
     )
 
     request = LLMRequest(
