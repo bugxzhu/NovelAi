@@ -599,3 +599,32 @@ export interface SearchResults {
   lore: SearchResultLore[];
   events: SearchResultEvent[];
 }
+
+// LLM settings (read-only). API keys come back masked from the server.
+export interface LLMSettings {
+  provider: string;
+  anthropic: {
+    api_key: string;
+    base_url: string;
+    model: string;
+  };
+  openai: {
+    api_key: string;
+    base_url: string;
+    model: string;
+  };
+  embedding: {
+    model: string;
+    dimensions: number;
+  };
+  retrieval: {
+    top_k: number;
+    threshold: number;
+  };
+}
+
+export interface LLMPingResponse {
+  text: string;
+  input_tokens: number;
+  output_tokens: number;
+}

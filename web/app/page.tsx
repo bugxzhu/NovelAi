@@ -7,6 +7,7 @@ import { ProjectCard } from "@/components/entities/ProjectCard";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SettingsButton } from "@/components/layout/SettingsButton";
 
 export default function HomePage() {
   const router = useRouter();
@@ -65,6 +66,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl">NovelAI</h1>
           <div className="flex items-center gap-2">
+            <SettingsButton />
             <ThemeToggle />
             <Button
               variant="primary"

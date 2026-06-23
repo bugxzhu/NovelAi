@@ -17,6 +17,8 @@ import type {
   PolishRequest, PolishResponse,
   GenreTemplate,
   SearchResults,
+  LLMSettings,
+  LLMPingResponse,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -243,4 +245,12 @@ export const api = {
   // Full-text search (chapters/characters/lore/events)
   search: (projectId: number, q: string) =>
     http<SearchResults>(`/api/search${qs({ project_id: projectId, q })}`),
+
+  // LLM settings + connection test (read-only display)
+  getLLMSettings: () => http<LLMSettings>("/api/llm/settings"),
+  pingLLM: (prompt = "ping") =>
+    http<LLMPingResponse>("/api/llm/ping", {
+      method: "POST",
+      body: JSON.stringify({ prompt, model_task: "writer_short" }),
+    }),
 };

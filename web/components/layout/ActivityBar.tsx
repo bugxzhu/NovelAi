@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SettingsButton } from "@/components/layout/SettingsButton";
 import { usePendingCount } from "@/lib/queries";
 
 const ITEMS = [
@@ -60,6 +61,7 @@ export function ActivityBar({ projectId }: { projectId: number }) {
         );
       })}
       <div className="flex-1" />
+      <SettingsButton />
       <ThemeToggle />
     </aside>
   );

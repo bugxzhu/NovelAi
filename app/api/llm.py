@@ -1,10 +1,46 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.config.settings import settings
 from app.llm.base import LLMRequest
 from app.llm.router import default_router
 
 router = APIRouter()
+
+
+def _mask(key: str | None) -> str:
+    """Mask an API key for safe display: keeps first 4 + last 4 chars."""
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return "***"
+    return key[:4] + "***" + key[-4:]
+
+
+@router.get("/settings")
+def get_llm_settings():
+    """Return current LLM configuration. API keys are masked, never raw."""
+    return {
+        "provider": settings.llm_provider,
+        "anthropic": {
+            "api_key": _mask(settings.anthropic_api_key),
+            "base_url": settings.anthropic_base_url or "",
+            "model": settings.anthropic_model,
+        },
+        "openai": {
+            "api_key": _mask(settings.openai_api_key),
+            "base_url": settings.openai_base_url or "",
+            "model": settings.openai_model,
+        },
+        "embedding": {
+            "model": settings.embedding_model,
+            "dimensions": settings.embedding_dimensions,
+        },
+        "retrieval": {
+            "top_k": settings.retrieval_top_k,
+            "threshold": settings.retrieval_threshold,
+        },
+    }
 
 
 class PingRequest(BaseModel):
