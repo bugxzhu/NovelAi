@@ -173,14 +173,17 @@ def get_pending(pending_id: int, db: Session = Depends(get_db)):
     return _to_detail(p, db)
 
 
-@router.post("/{pending_id}/accept", response_model=AcceptRejectResponse)
-def accept_pending(pending_id: int, db: Session = Depends(get_db)):
-    p = db.get(PendingUpdate, pending_id)
-    if p is None:
-        raise HTTPException(status_code=404, detail="pending update not found")
-    if p.status != "pending":
-        raise HTTPException(status_code=409, detail=f"already {p.status}")
+def _do_accept(db: Session, p: PendingUpdate) -> None:
+    """Apply the side effects of accepting `p` (INSERT/UPDATE the target row).
 
+    Mutates `p` in place: sets status='accepted', decided_at=now. Commits.
+
+    Raises HTTPException on any failure (caller's transaction is rolled back).
+
+    Extracted from `accept_pending` so batch-accept can reuse it. Each call
+    commits independently — batch-accept collects per-item errors rather than
+    aborting the whole batch on the first failure.
+    """
     try:
         if p.operation == "create":
             data = p.proposed_change or {}
@@ -343,13 +346,63 @@ def accept_pending(pending_id: int, db: Session = Depends(get_db)):
         p.decided_at = datetime.now(UTC)
         db.commit()
         db.refresh(p)
-        return _to_read(p)
     except HTTPException:
         db.rollback()
         raise
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="accept failed")
+
+
+@router.post("/batch-accept")
+def batch_accept(
+    body: dict,
+    db: Session = Depends(get_db),
+):
+    """Batch accept all pending hard_fact (auto=True) updates for a project.
+
+    Soft facts (state_changes, relationship_changes) are skipped — `auto=False`
+    on those rows. The user must still review them one by one because they
+    involve judgment calls (e.g., snapshot wording, relationship type).
+
+    Per-item failures don't abort the batch: each error is collected into
+    `errors` and the rest of the batch continues. The frontend surfaces
+    `accepted` / `total` so the user can see how many succeeded.
+    """
+    project_id = body.get("project_id")
+    if not project_id:
+        raise HTTPException(status_code=422, detail="project_id required")
+
+    pendings = list(db.scalars(
+        select(PendingUpdate).where(
+            PendingUpdate.project_id == project_id,
+            PendingUpdate.status == "pending",
+            PendingUpdate.auto.is_(True),
+        )
+    ))
+
+    accepted = 0
+    errors: list[dict] = []
+    for p in pendings:
+        try:
+            _do_accept(db, p)
+            accepted += 1
+        except HTTPException as e:
+            errors.append({"id": p.id, "error": e.detail})
+
+    return {"accepted": accepted, "errors": errors, "total": len(pendings)}
+
+
+@router.post("/{pending_id}/accept", response_model=AcceptRejectResponse)
+def accept_pending(pending_id: int, db: Session = Depends(get_db)):
+    p = db.get(PendingUpdate, pending_id)
+    if p is None:
+        raise HTTPException(status_code=404, detail="pending update not found")
+    if p.status != "pending":
+        raise HTTPException(status_code=409, detail=f"already {p.status}")
+
+    _do_accept(db, p)
+    return _to_read(p)
 
 
 @router.post("/{pending_id}/reject", response_model=AcceptRejectResponse)

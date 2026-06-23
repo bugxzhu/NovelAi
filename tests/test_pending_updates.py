@@ -705,6 +705,99 @@ def test_accept_event_invalid_location_type_500(client, fake_router):
     assert r.status_code == 500
 
 
+def test_batch_accept_hard_facts_only(client, fake_router):
+    """Batch accept only accepts auto=True (hard fact) pendings.
+
+    fake_router emits 1 new_character + 1 new_lore (both auto=True hard facts).
+    We then inject a soft_fact (character_states, auto=False) to verify batch-accept
+    skips it: the soft fact stays pending while both hard facts get accepted.
+    """
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {
+                "new_characters": [
+                    {"name": "韩梅", "role": "supporting", "description": "老板娘"}
+                ],
+                "updated_characters": [],
+                "new_lore": [
+                    {"type": "location", "name": "残月酒馆", "description": "酒馆"}
+                ],
+                "updated_lore": [],
+            },
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "李雷"})
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+
+    # 422 when project_id missing
+    r0 = client.post("/api/pending-updates/batch-accept", json={})
+    assert r0.status_code == 422
+
+    r = client.post("/api/pending-updates/batch-accept", json={"project_id": pid})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["accepted"] >= 1
+    assert data["total"] >= 1
+    assert data["accepted"] == data["total"]  # no soft facts yet → all accepted
+
+    # After batch: no pending auto=True rows remain for this project
+    remaining = client.get(f"/api/pending-updates?project_id={pid}").json()
+    assert all(p["status"] != "pending" for p in remaining if p.get("auto"))
+
+
+def test_batch_accept_skips_soft_facts(client, fake_router):
+    """Batch accept skips auto=False soft facts (state_changes / relationship_changes).
+
+    Seeds a hard_fact (new_character) + a soft_fact (state_change, auto=False).
+    Batch should accept only the hard fact; the soft fact stays pending.
+    """
+    fake_router.complete = MagicMock(return_value=LLMResponse(
+        text=json.dumps({
+            "summary": "x",
+            "entities": {
+                "new_characters": [
+                    {"name": "韩梅", "role": "supporting", "description": "老板娘"}
+                ],
+                "updated_characters": [],
+                "new_lore": [],
+                "updated_lore": [],
+            },
+            "state_changes": [
+                {"character_name": "李雷", "state_snapshot": "愤怒", "change_summary": "x"}
+            ],
+        }),
+        input_tokens=1, output_tokens=1, stop_reason="end_turn",
+    ))
+    fake_router.embed = MagicMock(return_value=[[0.0] * 1024])
+
+    pid = client.post("/api/projects", json={"title": "P"}).json()["id"]
+    client.post("/api/characters", json={"project_id": pid, "name": "李雷"})
+    ch = client.post("/api/chapters", json={
+        "project_id": pid, "order_index": 1, "title": "C1", "content": "x",
+    }).json()["id"]
+    client.post(f"/api/chapters/{ch}/finalize")
+
+    r = client.post("/api/pending-updates/batch-accept", json={"project_id": pid})
+    assert r.status_code == 200
+    data = r.json()
+    # 1 hard fact (new_character) accepted, 1 soft fact (state_change) skipped
+    assert data["accepted"] == 1
+    assert data["total"] == 1  # only counts auto=True rows
+
+    # The soft_fact (state_change) is still pending
+    remaining = client.get(f"/api/pending-updates?project_id={pid}").json()
+    pending_states = [p for p in remaining
+                      if p["target_table"] == "character_states" and p["status"] == "pending"]
+    assert len(pending_states) == 1
+
+
 def test_reject_event_no_db_change(client, fake_router):
     fake_router.complete = MagicMock(return_value=LLMResponse(
         text=json.dumps({

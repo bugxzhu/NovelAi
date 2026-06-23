@@ -253,6 +253,25 @@ export function useRejectPendingUpdate() {
   });
 }
 
+// Batch-accept all hard_fact pendings (characters / lore / events — NOT state_changes
+// or relationship_changes, which have auto=False). The backend filters by auto=True;
+// we invalidate every entity cache because any of those target_tables could have moved.
+export function useBatchAcceptPending() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: number) => api.batchAcceptPendingUpdates(projectId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pending-updates"] });
+      qc.invalidateQueries({ queryKey: ["pending-count"] });
+      qc.invalidateQueries({ queryKey: ["characters"] });
+      qc.invalidateQueries({ queryKey: ["lore"] });
+      qc.invalidateQueries({ queryKey: ["character-states"] });
+      qc.invalidateQueries({ queryKey: ["relationships"] });
+      qc.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
 // === M3c-B: Character States ===
 
 export function useCharacterStates(

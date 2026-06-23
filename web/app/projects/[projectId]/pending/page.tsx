@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useChapters, usePendingUpdates } from "@/lib/queries";
+import { useBatchAcceptPending, useChapters, usePendingUpdates } from "@/lib/queries";
 import { SidePanel } from "@/components/layout/SidePanel";
 import { ChapterWorkspaceGrid } from "@/components/layout/ChapterWorkspaceGrid";
 import { PendingUpdateItem } from "@/components/entities/PendingUpdateItem";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { PendingStatus } from "@/lib/types";
 
 const STATUS_TABS: Array<{ key: PendingStatus; label: string }> = [
@@ -26,9 +28,20 @@ export default function PendingPage() {
     status,
     chapterFilter || undefined
   );
+  const batchAccept = useBatchAcceptPending();
+  const toast = useToast();
 
   const chapterTitle = (cid: number) =>
     chapters?.find((c) => c.id === cid)?.title ?? `Chapter ${cid}`;
+
+  const handleBatchAccept = async () => {
+    try {
+      const res = await batchAccept.mutateAsync(pid);
+      toast(`已批量接受 ${res.accepted} 条硬事实`, "success");
+    } catch (e) {
+      toast(`批量接受失败: ${(e as Error).message}`, "error");
+    }
+  };
 
   return (
     <ChapterWorkspaceGrid
@@ -76,22 +89,38 @@ export default function PendingPage() {
       }
       editor={
         <div className="h-full overflow-y-auto p-4">
-          {isLoading ? (
-            <p className="text-text-muted">加载中...</p>
-          ) : !pendings || pendings.length === 0 ? (
-            <p className="text-text-muted">无符合条件的记录</p>
-          ) : (
-            <div className="max-w-3xl mx-auto">
-              {pendings.map((p) => (
-                <div key={p.id}>
-                  <div className="text-xs text-text-dim mt-3 mb-1">
-                    {chapterTitle(p.chapter_id)} · 第 {p.id} 条
-                  </div>
-                  <PendingUpdateItem pending={p} />
-                </div>
-              ))}
+          <div className="max-w-3xl mx-auto">
+            <div className="flex justify-end mb-2">
+              <Button
+                variant="primary"
+                onClick={handleBatchAccept}
+                disabled={batchAccept.isPending || status !== "pending"}
+                title={
+                  status === "pending"
+                    ? "接受所有硬事实（人物 / 设定 / 事件）；软事实（状态变化 / 关系变化）需要逐条审核"
+                    : "仅在“待处理”视图下可用"
+                }
+              >
+                {batchAccept.isPending ? "处理中..." : "⚡ 全部接受（硬事实）"}
+              </Button>
             </div>
-          )}
+            {isLoading ? (
+              <p className="text-text-muted">加载中...</p>
+            ) : !pendings || pendings.length === 0 ? (
+              <p className="text-text-muted">无符合条件的记录</p>
+            ) : (
+              <>
+                {pendings.map((p) => (
+                  <div key={p.id}>
+                    <div className="text-xs text-text-dim mt-3 mb-1">
+                      {chapterTitle(p.chapter_id)} · 第 {p.id} 条
+                    </div>
+                    <PendingUpdateItem pending={p} />
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       }
     />

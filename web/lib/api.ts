@@ -132,6 +132,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ note: note ?? "" }),
     }),
+  batchAcceptPendingUpdates: (projectId: number) =>
+    http<{ accepted: number; errors: unknown[]; total: number }>(
+      "/api/pending-updates/batch-accept",
+      { method: "POST", body: JSON.stringify({ project_id: projectId }) },
+    ),
   finalizeChapter: (chapterId: number) =>
     http<FinalizeResponse>(`/api/chapters/${chapterId}/finalize`, { method: "POST" }),
 

@@ -23,11 +23,18 @@ export default function ChaptersListPage() {
     window.location.href = `/projects/${pid}/chapters/${ch.id}`;
   };
 
+  // Chinese word count: strip whitespace, count remaining characters (CJK + latin).
+  // content is Markdown; whitespace includes spaces/tabs/newlines, which we don't
+  // want to inflate the count.
+  const totalChars = (chapters ?? []).reduce((sum, ch) => {
+    return sum + (ch.content || "").replace(/\s/g, "").length;
+  }, 0);
+
   return (
     <ChapterWorkspaceGrid
       sidePanel={
         <SidePanel
-          title="章节"
+          title={`章节 · 共 ${chapters?.length ?? 0} 章 · ${totalChars} 字`}
           action={
             <Button variant="ghost" onClick={handleCreate} disabled={createChapter.isPending}>
               + 新建
