@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCharacters, useCreateCharacter } from "@/lib/queries";
 import { SidePanel } from "@/components/layout/SidePanel";
 import { CharacterForm } from "@/components/entities/CharacterForm";
@@ -15,6 +15,14 @@ export default function CharactersPage() {
   const createChar = useCreateCharacter();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = (characters ?? []).find((c) => c.id === selectedId);
+
+  useEffect(() => {
+    const id = sessionStorage.getItem("selectCharId");
+    if (id) {
+      setSelectedId(Number(id));
+      sessionStorage.removeItem("selectCharId");
+    }
+  }, []);
 
   const handleCreate = async () => {
     const c = await createChar.mutateAsync({ project_id: pid, name: "未命名" });
