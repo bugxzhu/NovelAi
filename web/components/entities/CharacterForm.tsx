@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useUpdateCharacter, useDeleteCharacter, useLore } from "@/lib/queries";
+import { useUpdateCharacter, useDeleteCharacter, useLore, useProject, useGenreTemplates } from "@/lib/queries";
 import { CharacterStateTimeline } from "@/components/entities/CharacterStateTimeline";
 import { debounce } from "@/lib/debounce";
 import { Button } from "@/components/ui/Button";
@@ -32,8 +32,12 @@ export function CharacterForm({
   const del = useDeleteCharacter(projectId);
   const toast = useToast();
   const { data: lore } = useLore(projectId);
+  const { data: project } = useProject(projectId);
+  const { data: genreTemplates } = useGenreTemplates();
   const factions = (lore ?? []).filter((l) => l.type === "faction");
   const locations = (lore ?? []).filter((l) => l.type === "location");
+  const genreTpl =
+    project?.genre && genreTemplates ? genreTemplates[project.genre] ?? null : null;
 
   const [form, setForm] = useState<CharacterUpdate>({});
 
@@ -139,6 +143,21 @@ export function CharacterForm({
               onChange={(e) => setText(f.key, e.target.value)}
               className="w-full bg-input border border-line rounded p-2 text-text"
             />
+          )}
+          {f.key === "role" && genreTpl && genreTpl.character_archetypes.length > 0 && (
+            <div className="text-xs text-text-dim mt-1">
+              💡 常见角色：
+              {genreTpl.character_archetypes.map((arch) => (
+                <button
+                  key={arch}
+                  type="button"
+                  onClick={() => setText("role", arch)}
+                  className="inline-block px-2 py-0.5 mr-1 mt-1 rounded bg-input border border-line hover:bg-hover"
+                >
+                  {arch}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       ))}

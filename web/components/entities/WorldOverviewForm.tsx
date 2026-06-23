@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useWorldOverview, useUpdateWorldOverview } from "@/lib/queries";
+import {
+  useWorldOverview,
+  useUpdateWorldOverview,
+  useProject,
+  useGenreTemplates,
+} from "@/lib/queries";
 import { debounce } from "@/lib/debounce";
 import { useToast } from "@/components/ui/Toast";
 import type { WorldOverviewUpdate } from "@/lib/types";
@@ -17,9 +22,14 @@ const FIELDS: Array<{ key: keyof WorldOverviewUpdate; label: string; rows?: numb
 
 export function WorldOverviewForm({ projectId }: { projectId: number }) {
   const { data, isLoading } = useWorldOverview(projectId);
+  const { data: project } = useProject(projectId);
+  const { data: genreTemplates } = useGenreTemplates();
   const update = useUpdateWorldOverview(projectId);
   const toast = useToast();
   const [form, setForm] = useState<WorldOverviewUpdate>({});
+
+  const genreTpl =
+    project?.genre && genreTemplates ? genreTemplates[project.genre] ?? null : null;
 
   useEffect(() => {
     if (data) {
@@ -59,11 +69,35 @@ export function WorldOverviewForm({ projectId }: { projectId: number }) {
     save(next);
   };
 
+  const applyTemplateDefaults = () => {
+    if (!genreTpl) return;
+    const next: WorldOverviewUpdate = {
+      ...form,
+      power_system: genreTpl.world_defaults.power_system,
+      rules_and_taboos: genreTpl.world_defaults.rules_and_taboos,
+    };
+    setForm(next);
+    save(next);
+    toast(`已填入「${genreTpl.label}」默认设定`, "success");
+  };
+
   if (isLoading) return <div className="p-4 text-text-muted">加载中...</div>;
 
   return (
     <div className="p-4 space-y-4 max-w-2xl">
-      <h2 className="text-lg">世界观</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg">世界观</h2>
+        {genreTpl && (
+          <button
+            type="button"
+            onClick={applyTemplateDefaults}
+            className="text-xs text-text-muted hover:text-text"
+            title="将覆盖「力量体系」和「规则与禁忌」两栏内容"
+          >
+            💡 填入{genreTpl.label}默认设定
+          </button>
+        )}
+      </div>
       {FIELDS.map((f) => (
         <div key={f.key}>
           <label className="text-xs text-text-muted-bright block mb-1">{f.label}</label>

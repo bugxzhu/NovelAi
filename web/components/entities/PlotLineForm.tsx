@@ -5,6 +5,8 @@ import {
   useChapters,
   useCreatePlotLine,
   useUpdatePlotLine,
+  useProject,
+  useGenreTemplates,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -29,9 +31,13 @@ export function PlotLineForm({
   plotLine?: PlotLine;
 }) {
   const { data: chapters = [] } = useChapters(projectId);
+  const { data: project } = useProject(projectId);
+  const { data: genreTemplates } = useGenreTemplates();
   const create = useCreatePlotLine();
   const update = useUpdatePlotLine(plotLine?.id ?? 0, projectId);
   const toast = useToast();
+  const genreTpl =
+    project?.genre && genreTemplates ? genreTemplates[project.genre] ?? null : null;
 
   const isEdit = plotLine !== undefined;
 
@@ -135,6 +141,21 @@ export function PlotLineForm({
           onChange={(e) => setTitle(e.target.value)}
           className="w-full bg-input border border-line rounded p-2 text-text"
         />
+        {genreTpl && genreTpl.plot_templates.length > 0 && (
+          <div className="text-xs text-text-dim mt-1">
+            💡 常见流派：
+            {genreTpl.plot_templates.map((plt) => (
+              <button
+                key={plt}
+                type="button"
+                onClick={() => setTitle(plt)}
+                className="inline-block px-2 py-0.5 mr-1 mt-1 rounded bg-input border border-line hover:bg-hover"
+              >
+                {plt}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
