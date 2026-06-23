@@ -7,6 +7,8 @@ import { ChapterItem } from "@/components/entities/ChapterItem";
 import { ChapterWorkspaceGrid } from "@/components/layout/ChapterWorkspaceGrid";
 import { Button } from "@/components/ui/Button";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
+
 export default function ChaptersListPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number(projectId);
@@ -36,9 +38,23 @@ export default function ChaptersListPage() {
         <SidePanel
           title={`章节 · 共 ${chapters?.length ?? 0} 章 · ${totalChars} 字`}
           action={
-            <Button variant="ghost" onClick={handleCreate} disabled={createChapter.isPending}>
-              + 新建
-            </Button>
+            <div className="flex items-center gap-2">
+              <a
+                href={`${API_BASE}/api/projects/${pid}/export?format=markdown`}
+                className="text-xs px-2 py-1 rounded bg-button hover:bg-button-hover text-text"
+              >
+                导出 Markdown
+              </a>
+              <a
+                href={`${API_BASE}/api/projects/${pid}/export?format=txt`}
+                className="text-xs px-2 py-1 rounded bg-button hover:bg-button-hover text-text"
+              >
+                导出 TXT
+              </a>
+              <Button variant="ghost" onClick={handleCreate} disabled={createChapter.isPending}>
+                + 新建
+              </Button>
+            </div>
           }
         >
           {isLoading ? (

@@ -14,6 +14,7 @@ from app.api import (
     characters_states,
     deps,
     events,
+    export,
     genre_templates,
     generation_logs,
     health,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(genre_templates.router, prefix="/api/genre-templates",
                        tags=["genre_templates"])
     app.include_router(search.router, prefix="/api/search", tags=["search"])
+    app.include_router(export.router, prefix="/api/projects", tags=["export"])
     return app
 
 
