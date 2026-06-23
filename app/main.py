@@ -23,6 +23,7 @@ from app.api import (
     plot_lines,
     projects,
     relationships,
+    search,
     story_milestones,
     world,
 )
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
                        tags=["story_milestones"])
     app.include_router(genre_templates.router, prefix="/api/genre-templates",
                        tags=["genre_templates"])
+    app.include_router(search.router, prefix="/api/search", tags=["search"])
     return app
 
 

@@ -564,3 +564,38 @@ export interface GenreTemplate {
   character_archetypes: string[];
   plot_templates: string[];
 }
+
+// === Full-text search ===
+
+export interface SearchResultChapter {
+  id: number;
+  title: string;
+  order_index: number;
+  match_type: "title" | "summary" | "content";
+  snippet: string;
+}
+
+export interface SearchResultCharacter {
+  id: number;
+  name: string;
+  role: string;
+}
+
+export interface SearchResultLore {
+  id: number;
+  name: string;
+  type: string;
+}
+
+export interface SearchResultEvent {
+  id: number;
+  name: string;
+  description: string;
+}
+
+export interface SearchResults {
+  chapters: SearchResultChapter[];
+  characters: SearchResultCharacter[];
+  lore: SearchResultLore[];
+  events: SearchResultEvent[];
+}

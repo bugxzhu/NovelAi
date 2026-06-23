@@ -16,6 +16,7 @@ import type {
   DiscussBranch, DiscussRequest, DiscussResponse,
   PolishRequest, PolishResponse,
   GenreTemplate,
+  SearchResults,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
@@ -238,4 +239,8 @@ export const api = {
   // Genre Templates
   listGenreTemplates: () =>
     http<Record<string, GenreTemplate>>("/api/genre-templates"),
+
+  // Full-text search (chapters/characters/lore/events)
+  search: (projectId: number, q: string) =>
+    http<SearchResults>(`/api/search${qs({ project_id: projectId, q })}`),
 };
