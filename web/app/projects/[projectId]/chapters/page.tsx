@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useChapters, useCreateChapter } from "@/lib/queries";
 import { SidePanel } from "@/components/layout/SidePanel";
 import { ChapterItem } from "@/components/entities/ChapterItem";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 
 export default function ChaptersListPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const router = useRouter();
   const pid = Number(projectId);
   const { data: chapters, isLoading } = useChapters(pid);
   const createChapter = useCreateChapter();
@@ -20,7 +21,7 @@ export default function ChaptersListPage() {
       order_index: order,
       title: `第 ${order} 章`,
     });
-    window.location.href = `/projects/${pid}/chapters/${ch.id}`;
+    router.push(`/projects/${pid}/chapters/${ch.id}`);
   };
 
   return (
