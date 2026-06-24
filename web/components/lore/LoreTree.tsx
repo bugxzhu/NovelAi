@@ -51,16 +51,6 @@ function TreeNode({ entry, allEntries, level, selectedId, onSelect }: TreeNodePr
         )}
         <span className="shrink-0">{TYPE_ICONS[entry.type] || "📦"}</span>
         <span className="truncate">{entry.name || "未命名"}</span>
-        {entry.description && (
-          <span
-            className={`text-xs truncate ${
-              isSelected ? "text-white/60" : "text-text-dim"
-            }`}
-          >
-            — {entry.description.slice(0, 30)}
-            {entry.description.length > 30 ? "..." : ""}
-          </span>
-        )}
       </div>
       {hasChildren && expanded && (
         <div>
