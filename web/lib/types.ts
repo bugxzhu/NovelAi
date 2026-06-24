@@ -157,6 +157,7 @@ export interface Chapter {
   title: string;
   outline: string;
   content?: string;  // only present in single-chapter GET, not in list
+  char_count?: number;  // present in list responses (computed by backend)
   status: string;
   plot_line_ids: number[];
   summary: string;

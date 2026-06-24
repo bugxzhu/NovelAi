@@ -26,7 +26,7 @@ export function ChapterItem({
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(chapter.title);
-  const wordCount = chapter.content?.length ?? 0;
+  const wordCount = chapter.char_count ?? chapter.content?.length ?? 0;
 
   const save = () => {
     const trimmed = title.trim();

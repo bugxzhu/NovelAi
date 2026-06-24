@@ -31,7 +31,7 @@ export function ActivityBar({ projectId }: { projectId: number }) {
   const [showExport, setShowExport] = useState(false);
 
   const totalChars = (chapters ?? []).reduce((sum, ch) => {
-    return sum + (ch.content || "").replace(/\s/g, "").length;
+    return sum + (ch.char_count ?? 0);
   }, 0);
 
   return (

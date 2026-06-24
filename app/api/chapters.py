@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api._helpers import get_project_or_404
@@ -30,6 +30,10 @@ def list_chapters(project_id: int = Query(...), db: Session = Depends(get_db)):
             Chapter.title,
             Chapter.status,
             Chapter.summary,
+            # Chinese char count: strip spaces + newlines, count remaining chars
+            func.length(
+                func.replace(func.replace(Chapter.content, " ", ""), "\n", "")
+            ).label("char_count"),
             Chapter.created_at,
             Chapter.updated_at,
         )
@@ -45,6 +49,7 @@ def list_chapters(project_id: int = Query(...), db: Session = Depends(get_db)):
             title=r.title,
             status=r.status,
             summary=r.summary,
+            char_count=r.char_count or 0,
             created_at=r.created_at,
             updated_at=r.updated_at,
         )

@@ -48,5 +48,6 @@ class ChapterListItem(BaseModel):
     title: str
     status: str
     summary: str
+    char_count: int
     created_at: datetime
     updated_at: datetime
