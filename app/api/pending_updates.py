@@ -249,7 +249,10 @@ def _do_accept(db: Session, p: PendingUpdate) -> None:
                         detail="relationships pending missing from/to",
                     )
                 # Validate both endpoints still exist
-                if db.get(Character, from_id) is None or db.get(Character, to_id) is None:
+                existing = set(db.scalars(
+                    select(Character.id).where(Character.id.in_([from_id, to_id]))
+                ))
+                if from_id not in existing or to_id not in existing:
                     raise HTTPException(
                         status_code=500, detail="target character gone")
 
@@ -304,7 +307,13 @@ def _do_accept(db: Session, p: PendingUpdate) -> None:
 
                 # Filter involved_character_ids (drop deleted chars)
                 raw_involved = data.get("involved_character_ids") or []
-                involved_ids = [i for i in raw_involved if db.get(Character, i) is not None]
+                if raw_involved:
+                    valid_ids = set(db.scalars(
+                        select(Character.id).where(Character.id.in_(raw_involved))
+                    ))
+                    involved_ids = [i for i in raw_involved if i in valid_ids]
+                else:
+                    involved_ids = []
 
                 event = Event(
                     project_id=p.project_id,

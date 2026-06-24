@@ -156,7 +156,7 @@ export interface Chapter {
   order_index: number;
   title: string;
   outline: string;
-  content: string;
+  content?: string;  // only present in single-chapter GET, not in list
   status: string;
   plot_line_ids: number[];
   summary: string;

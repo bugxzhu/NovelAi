@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.models.common import ORMBase, TimestampMixin
@@ -36,3 +38,15 @@ class ChapterUpdate(BaseModel):
 class ChapterRead(ChapterBase, ORMBase, TimestampMixin):
     id: int
     project_id: int
+
+
+class ChapterListItem(BaseModel):
+    """Lightweight chapter info for list views — excludes content/content_hash."""
+    id: int
+    project_id: int
+    order_index: int
+    title: str
+    status: str
+    summary: str
+    created_at: datetime
+    updated_at: datetime

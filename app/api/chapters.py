@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api._helpers import get_project_or_404
 from app.api.deps import get_db
 from app.memory.schema import Chapter
-from app.models.chapter import ChapterCreate, ChapterRead, ChapterUpdate
+from app.models.chapter import ChapterCreate, ChapterListItem, ChapterRead, ChapterUpdate
 
 router = APIRouter()
 
@@ -20,14 +20,36 @@ def create_chapter(payload: ChapterCreate, db: Session = Depends(get_db)):
     return obj
 
 
-@router.get("", response_model=list[ChapterRead])
+@router.get("", response_model=list[ChapterListItem])
 def list_chapters(project_id: int = Query(...), db: Session = Depends(get_db)):
     stmt = (
-        select(Chapter)
+        select(
+            Chapter.id,
+            Chapter.project_id,
+            Chapter.order_index,
+            Chapter.title,
+            Chapter.status,
+            Chapter.summary,
+            Chapter.created_at,
+            Chapter.updated_at,
+        )
         .where(Chapter.project_id == project_id)
         .order_by(Chapter.order_index, Chapter.id)
     )
-    return list(db.scalars(stmt))
+    rows = db.execute(stmt).all()
+    return [
+        ChapterListItem(
+            id=r.id,
+            project_id=r.project_id,
+            order_index=r.order_index,
+            title=r.title,
+            status=r.status,
+            summary=r.summary,
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+        )
+        for r in rows
+    ]
 
 
 @router.get("/{chapter_id}", response_model=ChapterRead)
