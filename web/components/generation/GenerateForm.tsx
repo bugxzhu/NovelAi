@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useCharacters, useLore } from "@/lib/queries";
+import { useCharacters, useLore, useCreateLore } from "@/lib/queries";
 import { useGenerateParams, useBeatDraftStore } from "@/lib/store";
 import { useGenerate } from "./useGenerate";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { ModelTask } from "@/lib/types";
 
 export function GenerateForm({ chapterId }: { chapterId: number }) {
@@ -15,6 +16,30 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
   const { data: characters } = useCharacters(pid);
   const { data: lore } = useLore(pid);
   const locations = (lore ?? []).filter((l) => l.type === "location");
+  const createLore = useCreateLore();
+  const toast = useToast();
+  const [showNewLocation, setShowNewLocation] = useState(false);
+  const [newLocName, setNewLocName] = useState("");
+  const [newLocDesc, setNewLocDesc] = useState("");
+
+  const handleCreateLocation = async () => {
+    if (!newLocName.trim()) return;
+    try {
+      const loc = await createLore.mutateAsync({
+        project_id: pid,
+        type: "location",
+        name: newLocName.trim(),
+        description: newLocDesc.trim(),
+      });
+      setParams({ locationId: loc.id });
+      setNewLocName("");
+      setNewLocDesc("");
+      setShowNewLocation(false);
+      toast(`已创建地点：${loc.name}`, "success");
+    } catch (e) {
+      toast(`创建失败: ${(e as Error).message}`, "error");
+    }
+  };
 
   const { involvedCharacterIds, locationId, setParams } = useGenerateParams();
   // Beat + instruction drafts persist across tab switches via the per-chapter store;
@@ -93,21 +118,61 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
       </div>
 
       <div>
-        <label className="text-xs text-text-muted-bright block mb-1">地点</label>
-        <select
-          value={locationId ?? ""}
-          onChange={(e) =>
-            setParams({ locationId: e.target.value ? Number(e.target.value) : null })
-          }
-          className="bg-input border border-line rounded p-2 w-full text-text"
-        >
-          <option value="">（无）</option>
-          {locations.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
+        <label className="text-xs text-text-muted-bright block mb-1">地点（可选）</label>
+        <div className="flex gap-1">
+          <select
+            value={locationId ?? ""}
+            onChange={(e) =>
+              setParams({ locationId: e.target.value ? Number(e.target.value) : null })
+            }
+            className="bg-input border border-line rounded p-2 w-full text-text"
+          >
+            <option value="">（无，直接生成）</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+          {!showNewLocation && (
+            <button
+              type="button"
+              onClick={() => setShowNewLocation(true)}
+              title="新建地点"
+              className="px-2 py-1 rounded text-sm bg-button hover:bg-button-hover text-text shrink-0"
+            >
+              +
+            </button>
+          )}
+        </div>
+        {showNewLocation && (
+          <div className="mt-1 p-2 border border-line rounded bg-input/30 space-y-2">
+            <input
+              value={newLocName}
+              onChange={(e) => setNewLocName(e.target.value)}
+              placeholder="地点名称（如：残月酒馆）"
+              className="w-full bg-input border border-line rounded px-2 py-1 text-sm text-text"
+            />
+            <input
+              value={newLocDesc}
+              onChange={(e) => setNewLocDesc(e.target.value)}
+              placeholder="简短描述（可选）"
+              className="w-full bg-input border border-line rounded px-2 py-1 text-sm text-text"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                onClick={handleCreateLocation}
+                disabled={createLore.isPending || !newLocName.trim()}
+              >
+                创建
+              </Button>
+              <Button variant="ghost" onClick={() => setShowNewLocation(false)}>
+                取消
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div>
