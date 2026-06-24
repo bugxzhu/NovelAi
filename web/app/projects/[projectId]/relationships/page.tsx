@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useRelationships, useCharacters } from "@/lib/queries";
@@ -8,7 +9,18 @@ import { ChapterWorkspaceGrid } from "@/components/layout/ChapterWorkspaceGrid";
 import { Button } from "@/components/ui/Button";
 import { RelationshipForm } from "@/components/entities/RelationshipForm";
 import { RelationshipHistoryPanel } from "@/components/entities/RelationshipHistoryPanel";
-import { RelationshipGraphWrapper } from "@/components/relationships/RelationshipGraph";
+
+const RelationshipGraphWrapper = dynamic(
+  () => import("@/components/relationships/RelationshipGraph").then((m) => m.RelationshipGraphWrapper),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-text-muted text-sm">加载图谱...</p>
+      </div>
+    ),
+  },
+);
 
 export default function RelationshipsPage() {
   const { projectId } = useParams<{ projectId: string }>();

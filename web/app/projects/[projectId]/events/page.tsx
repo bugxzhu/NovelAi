@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useEvents } from "@/lib/queries";
@@ -9,8 +10,19 @@ import { Button } from "@/components/ui/Button";
 import { EventForm } from "@/components/entities/EventForm";
 import { EventList } from "@/components/entities/EventList";
 import { ForeshadowMultiselect } from "@/components/entities/ForeshadowMultiselect";
-import { ForeshadowGraphWrapper } from "@/components/events/ForeshadowGraph";
 import type { EventFilter } from "@/lib/types";
+
+const ForeshadowGraphWrapper = dynamic(
+  () => import("@/components/events/ForeshadowGraph").then((m) => m.ForeshadowGraphWrapper),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-text-muted text-sm">加载图谱...</p>
+      </div>
+    ),
+  },
+);
 
 export default function EventsPage() {
   const { projectId } = useParams<{ projectId: string }>();
