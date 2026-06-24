@@ -38,10 +38,10 @@ describe("GenerateForm", () => {
     expect(btn).toBeDisabled();
   });
 
-  it("disables submit when no character selected", async () => {
+  it("enables submit when beat has text even without character selected", async () => {
     const user = userEvent.setup();
     renderWithProviders(<GenerateForm chapterId={1} />);
     await user.type(screen.getByPlaceholderText(/李雷推开/), "主角遇旧友");
-    expect(screen.getByRole("button", { name: /生成/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /生成/ })).toBeEnabled();
   });
 });
