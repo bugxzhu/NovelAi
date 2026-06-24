@@ -9,7 +9,7 @@ from app.models.common import ORMBase, TimestampMixin
 class GenerateRequest(BaseModel):
     beat_text: str = Field(..., min_length=1, max_length=2000)
     instruction: str = Field(default="", max_length=500)
-    involved_character_ids: list[int] = Field(..., min_length=1, max_length=20)
+    involved_character_ids: list[int] = Field(default_factory=list, max_length=20)
     location_id: int | None = None
     model_task: Literal["writer_long", "writer_short"] = "writer_long"
     max_tokens: int = Field(default=4096, ge=64, le=8192)
