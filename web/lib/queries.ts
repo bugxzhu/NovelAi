@@ -183,6 +183,7 @@ export function useGenerationLog(id: number) {
   return useQuery({
     queryKey: ["generation-log", id],
     queryFn: () => api.getGenerationLog(id),
+    enabled: id > 0,
   });
 }
 
