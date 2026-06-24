@@ -86,7 +86,7 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
           onKeyDown={(e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
               e.preventDefault();
-              if (!isStreaming && beatText.trim() && involvedCharacterIds.length > 0) {
+              if (!isStreaming && beatText.trim()) {
                 handleSubmit();
               }
             }
@@ -103,7 +103,7 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
       </div>
 
       <div>
-        <label className="text-xs text-text-muted-bright block mb-1">涉及人物 *（1-20）</label>
+        <label className="text-xs text-text-muted-bright block mb-1">涉及人物（可选，1-20）</label>
         <div className="flex flex-wrap gap-1">
           {(characters ?? []).map((c) => (
             <Chip
@@ -208,7 +208,7 @@ export function GenerateForm({ chapterId }: { chapterId: number }) {
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={!beatText.trim() || involvedCharacterIds.length === 0}
+            disabled={!beatText.trim()}
           >
             ✨ 生成
           </Button>
