@@ -17,23 +17,36 @@ def delete_chapter_chunks(db: Session, chapter_id: int) -> None:
         sql_text("SELECT id FROM chunk_meta WHERE chapter_id = :cid"),
         {"cid": chapter_id},
     ).scalars().all()
-    if not rowids:
-        return
-    db.execute(
-        sql_text("DELETE FROM chunk_meta WHERE chapter_id = :cid"),
-        {"cid": chapter_id},
-    )
-    # Build named placeholders manually: SQLAlchemy's `expanding=True` bindparam
-    # renders `IN ((?, ?))` which SQLite parses as a row-value comparison and
-    # rejects with "row value misused" when len(rowids) >= 2. Positional `?`
-    # placeholders don't accept a list as execute params in SQLAlchemy 2.0
-    # (it expects dicts). Named binds (r0, r1, ...) sidestep both issues.
-    placeholders = ",".join(f":r{i}" for i in range(len(rowids)))
-    params = {f"r{i}": rid for i, rid in enumerate(rowids)}
-    db.execute(
-        sql_text(f"DELETE FROM vec_chunks WHERE rowid IN ({placeholders})"),
-        params,
-    )
+    if rowids:
+        db.execute(
+            sql_text("DELETE FROM chunk_meta WHERE chapter_id = :cid"),
+            {"cid": chapter_id},
+        )
+        placeholders = ",".join(f":r{i}" for i in range(len(rowids)))
+        params = {f"r{i}": rid for i, rid in enumerate(rowids)}
+        db.execute(
+            sql_text(f"DELETE FROM vec_chunks WHERE rowid IN ({placeholders})"),
+            params,
+        )
+
+    # Also clean up orphaned vec_chunks rows (rowids not in chunk_meta).
+    # This happens when chunk_meta was deleted but vec_chunks wasn't
+    # (e.g., previous finalize failed mid-way, or manual cleanup).
+    all_meta_ids = db.execute(
+        sql_text("SELECT id FROM chunk_meta"),
+    ).scalars().all()
+    if all_meta_ids:
+        placeholders = ",".join(f":m{i}" for i in range(len(all_meta_ids)))
+        params = {f"m{i}": mid for i, mid in enumerate(all_meta_ids)}
+        db.execute(
+            sql_text(
+                f"DELETE FROM vec_chunks WHERE rowid NOT IN ({placeholders})"
+            ),
+            params,
+        )
+    else:
+        # No chunk_meta rows at all — wipe vec_chunks clean
+        db.execute(sql_text("DELETE FROM vec_chunks"))
 
 
 def insert_chunk(
