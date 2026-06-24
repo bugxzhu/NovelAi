@@ -8,6 +8,7 @@ import { LoreForm } from "@/components/entities/LoreForm";
 import { WorldOverviewForm } from "@/components/entities/WorldOverviewForm";
 import { Button } from "@/components/ui/Button";
 import { ChapterWorkspaceGrid } from "@/components/layout/ChapterWorkspaceGrid";
+import { LoreTree } from "@/components/lore/LoreTree";
 import type { LoreType } from "@/lib/types";
 
 const TABS: Array<{ key: string; label: string; types: LoreType[] }> = [
@@ -22,6 +23,7 @@ export default function LorePage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number(projectId);
   const [tab, setTab] = useState<string>("location");
+  const [view, setView] = useState<"tree" | "list">("tree");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const { data: lore } = useLore(pid);
   const createLore = useCreateLore();
@@ -29,7 +31,7 @@ export default function LorePage() {
 
   const currentTab = TABS.find((t) => t.key === tab)!;
   const filtered = (lore ?? []).filter((l) =>
-    tab === "overview" ? false : currentTab.types.includes(l.type)
+    tab === "overview" ? false : currentTab.types.includes(l.type),
   );
   const selected = (lore ?? []).find((l) => l.id === selectedId);
 
@@ -46,7 +48,7 @@ export default function LorePage() {
   return (
     <ChapterWorkspaceGrid
       sidePanel={
-        <SidePanel title="设定">
+        <SidePanel title="设定集">
           <div className="flex flex-wrap gap-1 mb-2 px-1">
             {TABS.map((t) => (
               <button
@@ -66,16 +68,50 @@ export default function LorePage() {
             ))}
           </div>
           {tab !== "overview" && (
-            <div className="px-1 mb-2">
-              <Button variant="ghost" onClick={handleCreate} disabled={createLore.isPending}>
+            <div className="flex items-center gap-2 px-1 mb-2">
+              <Button
+                variant="ghost"
+                onClick={handleCreate}
+                disabled={createLore.isPending}
+              >
                 + 新建
               </Button>
+              <div className="flex gap-1 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setView("tree")}
+                  className={`px-2 py-0.5 rounded text-xs ${
+                    view === "tree"
+                      ? "bg-accent text-white"
+                      : "bg-button text-text"
+                  }`}
+                >
+                  树形
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("list")}
+                  className={`px-2 py-0.5 rounded text-xs ${
+                    view === "list"
+                      ? "bg-accent text-white"
+                      : "bg-button text-text"
+                  }`}
+                >
+                  列表
+                </button>
+              </div>
             </div>
           )}
           {tab === "overview" ? (
             <p className="text-xs text-text-muted p-2">
               {worldOverview ? "点右侧编辑" : "右侧创建"}
             </p>
+          ) : view === "tree" ? (
+            <LoreTree
+              entries={filtered}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
           ) : filtered.length === 0 ? (
             <p className="text-xs text-text-muted p-2">
               还没有设定。点击&quot;+ 新建&quot;添加地点、势力、物品等，让 AI 的世界更丰富。

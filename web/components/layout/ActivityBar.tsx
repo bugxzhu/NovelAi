@@ -15,7 +15,7 @@ const ITEMS = [
   { icon: "🎯", label: "事件", path: "events", view: "events" as const },
   { icon: "📊", label: "情节线", path: "plot-lines", view: "plot-lines" as const },
   { icon: "🗺️", label: "蓝图", path: "outline", view: "outline" as const },
-  { icon: "🌍", label: "设定", path: "lore", view: "lore" as const },
+  { icon: "🌍", label: "设定集", path: "lore", view: "lore" as const },
   { icon: "📜", label: "历史", path: "history", view: "history" as const },
   { icon: "📋", label: "待处理", path: "pending", view: "pending" as const },
   { icon: "🔍", label: "搜索", path: "search", view: "search" as const },
