@@ -141,9 +141,10 @@ test("finalize event → accept → see in events list → can open foreshadow p
   await page.getByRole("button", { name: /接受/ }).first().click();
   await expect(page.getByText(/已接受/)).toBeVisible({ timeout: 10_000 });
 
-  // 7. Navigate to /events → see both events, no ⚠️ yet (filter tab text contains ⚠️,
-  // so we scope to event list buttons that start with 🎯)
+  // 7. Navigate to /events → switch to 列表 tab → see both events, no ⚠️ yet
+  // (filter tab text contains ⚠️, so we scope to event list buttons that start with 🎯)
   await page.goto(`/projects/${pid}/events`);
+  await page.click("button:has-text('列表')");
   await expect(page.getByText(/🎯 残月酒馆重逢/)).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/🎯 真相揭露/)).toBeVisible();
   // No event button should show ⚠️ yet

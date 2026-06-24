@@ -3,6 +3,8 @@ import { test, expect } from "@playwright/test";
 test("create project, navigate to chapters, create chapter", async ({ page }) => {
   await page.goto("/");
   await page.click("text=+ 新建项目");
+  await page.fill('input[placeholder="给你的故事起个名字"]', "E2E 项目章节");
+  await page.click("button:has-text('创建')");
   await page.waitForURL(/\/projects\/\d+\/chapters/);
 
   // Create chapter

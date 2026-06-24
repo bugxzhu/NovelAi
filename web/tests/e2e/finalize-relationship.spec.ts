@@ -153,8 +153,9 @@ test("finalize produces relationship_changes pending → accept → see in histo
   await page.getByRole("button", { name: /接受/ }).first().click();
   await expect(page.getByText(/已接受/)).toBeVisible({ timeout: 10_000 });
 
-  // 8. Navigate to /relationships → see 仇人 in list
+  // 8. Navigate to /relationships → switch to 列表 tab → see 仇人 in list
   await page.goto(`/projects/${pid}/relationships`);
+  await page.click("button:has-text('列表')");
   await expect(page.getByText(/李雷 → 韩梅 · 仇人/)).toBeVisible({ timeout: 10_000 });
 
   // 9. Click relationship → history panel shows 1 version

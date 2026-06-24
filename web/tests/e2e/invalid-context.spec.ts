@@ -3,6 +3,8 @@ import { test, expect } from "@playwright/test";
 test("invalid context returns 422 from backend", async ({ page }) => {
   await page.goto("/");
   await page.click("text=+ 新建项目");
+  await page.fill('input[placeholder="给你的故事起个名字"]', "E2E 跨项目校验");
+  await page.click("button:has-text('创建')");
   await page.waitForURL(/\/projects\/\d+\/chapters/);
 
   const projectId = new URL(page.url()).pathname.split("/")[2];

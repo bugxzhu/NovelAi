@@ -5,6 +5,8 @@ test("generate and accept inserts into editor", async ({ page }) => {
   // Setup: create project via UI
   await page.goto("/");
   await page.click("text=+ 新建项目");
+  await page.fill('input[placeholder="给你的故事起个名字"]', "E2E 生成接受");
+  await page.click("button:has-text('创建')");
   await page.waitForURL(/\/projects\/\d+\/chapters/);
 
   const projectId = new URL(page.url()).pathname.split("/")[2];
