@@ -22,6 +22,8 @@ export function ChapterWorkspaceGrid({
   const bottomPanelOpen = useUIStore((s) => s.bottomPanelOpen);
   const bottomPanelHeight = useUIStore((s) => s.bottomPanelHeight);
   const setBottomPanelHeight = useUIStore((s) => s.setBottomPanelHeight);
+  const contextPanelOpen = useUIStore((s) => s.contextPanelOpen);
+  const toggleContextPanel = useUIStore((s) => s.toggleContextPanel);
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
@@ -77,10 +79,22 @@ export function ChapterWorkspaceGrid({
         </main>
         {contextPanel && (
           <aside
-            style={{ width: contextPanelWidth }}
-            className="shrink-0 border-l border-line overflow-hidden bg-panel"
+            style={{ width: contextPanelOpen ? contextPanelWidth : 10 }}
+            className="relative shrink-0 border-l border-line bg-panel overflow-hidden transition-[width] duration-150"
           >
-            {contextPanel}
+            <button
+              type="button"
+              onClick={toggleContextPanel}
+              title={contextPanelOpen ? "折叠右栏" : "展开右栏"}
+              aria-label={contextPanelOpen ? "折叠右栏" : "展开右栏"}
+              aria-expanded={contextPanelOpen}
+              className="absolute left-0 top-0 h-full w-[10px] flex items-center justify-center text-xs text-text-muted hover:bg-hover hover:text-text cursor-pointer"
+            >
+              {contextPanelOpen ? "◂" : "▸"}
+            </button>
+            {contextPanelOpen && (
+              <div className="h-full pl-[10px] overflow-hidden">{contextPanel}</div>
+            )}
           </aside>
         )}
       </div>

@@ -12,6 +12,7 @@ interface UIState {
   contextPanelWidth: number;
   bottomPanelHeight: number;
   bottomPanelOpen: boolean;
+  contextPanelOpen: boolean;
 
   // Theme (persisted)
   theme: Theme;
@@ -26,6 +27,7 @@ interface UIState {
   setBottomPanelHeight: (h: number) => void;
   toggleBottomPanel: () => void;
   setBottomPanelOpen: (open: boolean) => void;
+  toggleContextPanel: () => void;
   setActiveView: (v: ActiveView) => void;
   setGenerationStatus: (s: GenerationStatus) => void;
   setTheme: (t: Theme) => void;
@@ -39,6 +41,7 @@ export const useUIStore = create<UIState>()(
       contextPanelWidth: 240,
       bottomPanelHeight: 200,
       bottomPanelOpen: false,
+      contextPanelOpen: true,
       // Default to dark since the original spec was VS Code dark.
       theme: "dark",
       activeView: "chapters",
@@ -49,6 +52,7 @@ export const useUIStore = create<UIState>()(
       setBottomPanelHeight: (h) => set({ bottomPanelHeight: h }),
       toggleBottomPanel: () => set((s) => ({ bottomPanelOpen: !s.bottomPanelOpen })),
       setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
+      toggleContextPanel: () => set((s) => ({ contextPanelOpen: !s.contextPanelOpen })),
       setActiveView: (v) => set({ activeView: v }),
       setGenerationStatus: (s) => set({ generationStatus: s }),
       setTheme: (t) => set({ theme: t }),
@@ -63,6 +67,7 @@ export const useUIStore = create<UIState>()(
         contextPanelWidth: s.contextPanelWidth,
         bottomPanelHeight: s.bottomPanelHeight,
         bottomPanelOpen: s.bottomPanelOpen,
+        contextPanelOpen: s.contextPanelOpen,
         theme: s.theme,
       }),
     }
