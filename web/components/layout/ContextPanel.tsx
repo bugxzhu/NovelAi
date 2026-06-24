@@ -1,12 +1,16 @@
 "use client";
 
-import { useCharacters, useLore } from "@/lib/queries";
+import { useCharacters, useLore, usePlotLines, useUpdateChapter } from "@/lib/queries";
+import { Chip } from "@/components/ui/Chip";
+import type { Chapter } from "@/lib/types";
 import { useGenerateParams } from "@/lib/store";
 
-export function ContextPanel({ projectId }: { projectId: number }) {
+export function ContextPanel({ projectId, chapter }: { projectId: number; chapter: Chapter }) {
   const { involvedCharacterIds, locationId } = useGenerateParams();
   const { data: characters } = useCharacters(projectId);
   const { data: allLore } = useLore(projectId);
+  const { data: plotLines = [] } = usePlotLines(projectId);
+  const updateChapter = useUpdateChapter(chapter.id, projectId);
 
   const involvedChars = (characters ?? []).filter((c) => involvedCharacterIds.includes(c.id));
   const location = (allLore ?? []).find((l) => l.id === locationId);
@@ -46,6 +50,31 @@ export function ContextPanel({ projectId }: { projectId: number }) {
           factions.map((f) => <div key={f.id} className="text-text">· {f.name}</div>)
         )}
       </Section>
+
+      {plotLines.length > 0 && (
+        <Section title="情节线">
+          <div className="flex flex-wrap gap-1">
+            {plotLines.map((pl) => {
+              const selected = (chapter.plot_line_ids || []).includes(pl.id);
+              return (
+                <Chip
+                  key={pl.id}
+                  selected={selected}
+                  onClick={() => {
+                    const current = chapter.plot_line_ids || [];
+                    const next = current.includes(pl.id)
+                      ? current.filter((id) => id !== pl.id)
+                      : [...current, pl.id];
+                    updateChapter.mutate({ plot_line_ids: next });
+                  }}
+                >
+                  {pl.title}
+                </Chip>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
       <div className="mt-6 p-2 bg-input rounded text-xs text-text-muted">
         💡 这是 AI 生成时将看到的常驻层。点人物/地点可在底部生成面板中调整。

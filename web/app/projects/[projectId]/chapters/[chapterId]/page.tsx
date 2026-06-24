@@ -78,7 +78,7 @@ export default function ChapterPage() {
         </SidePanel>
       }
       editor={<ChapterEditor chapter={chapter} onDelete={handleDeleteChapter} />}
-      contextPanel={<ContextPanel projectId={pid} />}
+      contextPanel={<ContextPanel projectId={pid} chapter={chapter} />}
       bottomPanel={<BottomPanel chapterId={cid} />}
     />
   );
