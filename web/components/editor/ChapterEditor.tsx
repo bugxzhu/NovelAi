@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import type { MarkdownStorage } from "tiptap-markdown";
@@ -16,6 +17,9 @@ import { PolishModal } from "./PolishModal";
 import { useChapterAutosave } from "./useChapterAutosave";
 import type { Chapter } from "@/lib/types";
 import { useReviewStore, useDiscussStore } from "@/lib/store";
+import { useCreateChapterVersion } from "@/lib/queries";
+import { getCurrentChapterContent } from "@/lib/editor";
+import { useToast } from "@/components/ui/Toast";
 
 // TipTap's `Storage` is a generic record and does not auto-merge per-extension
 // storage, so we cast the `markdown` namespace to the package's own typed shape.
@@ -34,6 +38,19 @@ export function ChapterEditor({
   onDelete?: () => void;
 }) {
   const autosave = useChapterAutosave(chapter.id, chapter.project_id);
+  const router = useRouter();
+  const createVersion = useCreateChapterVersion(chapter.id);
+  const toast = useToast();
+
+  const handleManualSnapshot = async () => {
+    try {
+      const content = getCurrentChapterContent();
+      await createVersion.mutateAsync({ content, reason: "manual" });
+      toast("已存为版本", "success");
+    } catch (e) {
+      toast(`版本保存失败: ${(e as Error).message}`, "error");
+    }
+  };
   // IME (中文输入法) composition state — skip onUpdate while user is mid-composition
   // to prevent stale pinyin characters from being serialized into Markdown, and to
   // avoid React re-renders disturbing the browser-locked DOM during composition.
@@ -132,6 +149,23 @@ export function ChapterEditor({
             <ReviewButton chapterId={chapter.id} />
             <DiscussButton chapterId={chapter.id} editor={editor} />
             <PolishButton chapterId={chapter.id} editor={editor} />
+            <button
+              type="button"
+              onClick={handleManualSnapshot}
+              disabled={createVersion.isPending}
+              title="存为版本（可从版本页恢复）"
+              className="px-2 py-1 rounded text-sm bg-button hover:bg-button-hover text-text disabled:opacity-50"
+            >
+              💾
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/projects/${chapter.project_id}/chapters/${chapter.id}/versions`)}
+              title="版本历史"
+              className="px-2 py-1 rounded text-sm bg-button hover:bg-button-hover text-text"
+            >
+              📜
+            </button>
           </>
         }
       />
