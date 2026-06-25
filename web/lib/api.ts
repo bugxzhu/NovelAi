@@ -4,6 +4,7 @@ import type {
   LoreEntry, LoreCreate, LoreUpdate,
   Character, CharacterCreate, CharacterUpdate,
   Chapter, ChapterCreate, ChapterUpdate,
+  ChapterVersionListItem, ChapterVersionRead, ChapterVersionCreate, ChapterVersionRestoreResponse,
   GenerationLogRead, GenerationLogDetail,
   PendingUpdateRead, PendingUpdateDetail,
   FinalizeResponse, PendingStatus,
@@ -110,6 +111,24 @@ export const api = {
     http<Chapter>(`/api/chapters/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteChapter: (id: number) =>
     http<void>(`/api/chapters/${id}`, { method: "DELETE" }),
+
+  // === Chapter version history ===
+  listChapterVersions: (chapterId: number, limit = 100) =>
+    http<ChapterVersionListItem[]>(
+      `/api/chapters/${chapterId}/versions?limit=${limit}`
+    ),
+  getChapterVersion: (versionId: number) =>
+    http<ChapterVersionRead>(`/api/chapter-versions/${versionId}`),
+  createChapterVersion: (chapterId: number, data: ChapterVersionCreate) =>
+    http<ChapterVersionRead>(`/api/chapters/${chapterId}/versions`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  restoreChapterVersion: (versionId: number) =>
+    http<ChapterVersionRestoreResponse>(
+      `/api/chapter-versions/${versionId}/restore`,
+      { method: "POST" }
+    ),
 
   // Generation logs (M2b: project_id supported)
   listGenerationLogs: (params: { chapter_id?: number; project_id?: number; limit?: number; offset?: number }) =>

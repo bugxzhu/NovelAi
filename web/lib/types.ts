@@ -629,3 +629,40 @@ export interface LLMPingResponse {
   input_tokens: number;
   output_tokens: number;
 }
+
+// === Chapter Version History ===
+export type ChapterVersionReason =
+  | "manual"
+  | "pre_ai_accept"
+  | "pre_polish_accept"
+  | "pre_finalize"
+  | "pre_restore";
+
+export interface ChapterVersionListItem {
+  id: number;
+  chapter_id: number;
+  char_count: number;
+  delta_char_count: number;
+  reason: ChapterVersionReason;
+  created_at: string;
+}
+
+export interface ChapterVersionRead {
+  id: number;
+  chapter_id: number;
+  char_count: number;
+  reason: ChapterVersionReason;
+  created_at: string;
+  content?: string | null;
+}
+
+export interface ChapterVersionCreate {
+  content: string;
+  reason: ChapterVersionReason;
+}
+
+export interface ChapterVersionRestoreResponse {
+  restored_version_id: number;
+  new_pre_restore_id: number;
+  new_char_count: number;
+}

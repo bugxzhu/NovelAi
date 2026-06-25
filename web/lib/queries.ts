@@ -12,6 +12,7 @@ import type {
   LoreCreate, LoreUpdate,
   CharacterCreate, CharacterUpdate,
   ChapterCreate, ChapterUpdate,
+  ChapterVersionCreate,
   PendingStatus,
   RelationshipCreate, RelationshipUpdate,
   EventCreate, EventUpdate, EventFilter,
@@ -163,6 +164,47 @@ export function useDeleteChapter(projectId: number) {
   return useMutation({
     mutationFn: (id: number) => api.deleteChapter(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["chapters", projectId] }),
+  });
+}
+
+// === Chapter version history ===
+export function useChapterVersions(chapterId: number) {
+  return useQuery({
+    queryKey: ["chapter-versions", chapterId],
+    queryFn: () => api.listChapterVersions(chapterId),
+    enabled: chapterId > 0,
+  });
+}
+
+export function useChapterVersion(versionId: number) {
+  return useQuery({
+    queryKey: ["chapter-version", versionId],
+    queryFn: () => api.getChapterVersion(versionId),
+    enabled: versionId > 0,
+  });
+}
+
+export function useCreateChapterVersion(chapterId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ChapterVersionCreate) =>
+      api.createChapterVersion(chapterId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["chapter-versions", chapterId] });
+    },
+  });
+}
+
+export function useRestoreChapterVersion(versionId: number, chapterId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.restoreChapterVersion(versionId),
+    onSuccess: (data) => {
+      // Surgical invalidation: specific chapter content + that chapter's versions + chapter list
+      qc.invalidateQueries({ queryKey: ["chapter", chapterId] });
+      qc.invalidateQueries({ queryKey: ["chapter-versions", chapterId] });
+      return data;
+    },
   });
 }
 
