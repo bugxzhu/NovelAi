@@ -120,6 +120,25 @@ class Chapter(Base):
     project: Mapped["Project"] = relationship(back_populates="chapters")
 
 
+class ChapterVersion(Base):
+    """Append-only snapshot of chapter.content for rollback.
+
+    Created either manually (toolbar button) or automatically before
+    content-mutating events (AI accept / polish accept / finalize / restore).
+    """
+
+    __tablename__ = "chapter_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    char_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    reason: Mapped[str] = mapped_column(String(30), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now_utc)
+
+
 class GenerationLog(Base):
     __tablename__ = "generation_logs"
 
