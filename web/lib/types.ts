@@ -665,4 +665,5 @@ export interface ChapterVersionRestoreResponse {
   restored_version_id: number;
   new_pre_restore_id: number;
   new_char_count: number;
+  restored_content: string;
 }

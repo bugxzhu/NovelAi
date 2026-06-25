@@ -165,4 +165,5 @@ def restore_version(version_id: int, db: Session = Depends(get_db)):
         restored_version_id=v.id,
         new_pre_restore_id=pre_restore.id,
         new_char_count=len(v.content),
+        restored_content=v.content,
     )

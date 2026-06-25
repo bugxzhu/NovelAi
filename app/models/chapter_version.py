@@ -62,3 +62,4 @@ class ChapterVersionRestoreResponse(BaseModel):
     restored_version_id: int
     new_pre_restore_id: int
     new_char_count: int
+    restored_content: str
