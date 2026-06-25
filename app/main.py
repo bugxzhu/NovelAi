@@ -10,6 +10,7 @@ from app.api import (
     chapters_generate,
     chapters_polish,
     chapters_review,
+    chapter_versions,
     characters,
     characters_states,
     deps,
@@ -71,6 +72,8 @@ def create_app() -> FastAPI:
                        tags=["chapters_discuss"])
     app.include_router(chapters_polish.router, prefix="/api/chapters",
                        tags=["chapters_polish"])
+    app.include_router(chapter_versions.router, prefix="/api",
+                       tags=["chapter_versions"])
     app.include_router(llm.router, prefix="/api/llm", tags=["llm"])
     app.include_router(generation_logs.router, prefix="/api/generation-logs",
                        tags=["generation_logs"])
