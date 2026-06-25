@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { api, ApiError } from "@/lib/api";
+import { getCurrentChapterContent } from "@/lib/editor";
+import { useCreateChapterVersion } from "@/lib/queries";
 import { usePolishStore } from "@/lib/store";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -33,6 +35,7 @@ export function PolishModal({
   const setPolishResult = usePolishStore((s) => s.setPolishResult);
   const closePolishModal = usePolishStore((s) => s.closePolishModal);
   const toast = useToast();
+  const createVersion = useCreateChapterVersion(chapterId);
   const [direction, setDirection] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -63,11 +66,17 @@ export function PolishModal({
     }
   };
 
-  const handleAccept = (text: string) => {
+  const handleAccept = async (text: string) => {
     const ed = editorRef.current;
     if (!ed) {
       toast("编辑器未就绪", "error");
       return;
+    }
+    try {
+      const content = getCurrentChapterContent();
+      await createVersion.mutateAsync({ content, reason: "pre_polish_accept" });
+    } catch {
+      // Non-blocking: snapshot failure shouldn't break the primary action
     }
     if (
       isSelection &&

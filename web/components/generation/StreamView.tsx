@@ -2,6 +2,8 @@
 
 import { useGenerate } from "./useGenerate";
 import { useBeatDraftStore } from "@/lib/store";
+import { getCurrentChapterContent } from "@/lib/editor";
+import { useCreateChapterVersion } from "@/lib/queries";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import type { Editor } from "@tiptap/react";
@@ -10,18 +12,25 @@ export function StreamView({ chapterId }: { chapterId: number }) {
   const { events, generatedText, status, reset, retry, error } = useGenerate(chapterId);
   const clearBeatDraft = useBeatDraftStore((s) => s.clear);
   const toast = useToast();
+  const createVersion = useCreateChapterVersion(chapterId);
 
   const meta = events.find((e) => e.type === "meta");
   const contextEvent = events.find((e) => e.type === "context");
   const doneEvent = events.find((e) => e.type === "done");
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     const editor = (window as unknown as { __chapterEditor?: Editor }).__chapterEditor;
     if (!editor) {
       toast("编辑器尚未就绪，请稍候再试", "error");
       return;
     }
     if (!generatedText) return;
+    try {
+      const content = getCurrentChapterContent();
+      await createVersion.mutateAsync({ content, reason: "pre_ai_accept" });
+    } catch {
+      // Non-blocking: snapshot failure shouldn't break the primary action
+    }
     editor.chain().focus().insertContent(generatedText).run();
     // Trigger immediate save by simulating blur — ChapterEditor's onBlur handler
     // reads the freshest markdown from the editor itself, so we don't need to compute it here.

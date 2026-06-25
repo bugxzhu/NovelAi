@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FinalizeButton } from "@/components/editor/FinalizeButton";
 import { ToastProvider } from "@/components/ui/Toast";
 
+vi.mock("@/lib/queries", () => ({
+  useCreateChapterVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(

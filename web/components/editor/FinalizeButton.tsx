@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { getCurrentChapterContent } from "@/lib/editor";
+import { useCreateChapterVersion } from "@/lib/queries";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 
@@ -14,11 +16,18 @@ export function FinalizeButton({
 }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const createVersion = useCreateChapterVersion(chapterId);
   const [finalizing, setFinalizing] = useState(false);
 
   const handleFinalize = async () => {
     setFinalizing(true);
     try {
+      try {
+        const content = getCurrentChapterContent();
+        await createVersion.mutateAsync({ content, reason: "pre_finalize" });
+      } catch {
+        // Non-blocking: snapshot failure shouldn't break the primary action
+      }
       const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8005";
       const r = await fetch(`${base}/api/chapters/${chapterId}/finalize`, {
         method: "POST",

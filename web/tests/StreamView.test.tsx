@@ -3,6 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { StreamView } from "@/components/generation/StreamView";
 import { ToastProvider } from "@/components/ui/Toast";
 
+vi.mock("@/lib/queries", () => ({
+  useCreateChapterVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock("@/components/generation/useGenerate", () => {
   const state = {
     events: [] as unknown[],
